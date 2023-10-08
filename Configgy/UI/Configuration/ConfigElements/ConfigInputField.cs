@@ -99,24 +99,7 @@ namespace Configgy
             {
                 DynUI.InputField(r, SetInputField);
             },
-            (rBS) =>
-            {
-                DynUI.ImageButton(rBS, (button, icon) =>
-                {
-                    button.colors.SetFirstColor(Color.red);
-                    RectTransform rt = button.GetComponent<RectTransform>();
-                    rt.sizeDelta = new Vector2(55f, 55f);
-                    button.onClick.AddListener(() => { Debug.Log(GetValue()); });
-                });
-
-                DynUI.ImageButton(rBS, (button, icon) =>
-                {
-                    button.colors.SetFirstColor(Color.red);
-                    RectTransform rt = button.GetComponent<RectTransform>();
-                    rt.sizeDelta = new Vector2(55f, 55f);
-                    button.onClick.AddListener(() => { Debug.Log(DefaultValue); });
-                });
-            });
+            null);
         }
     }
 }

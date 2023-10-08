@@ -153,7 +153,7 @@ namespace Configgy.UI
                             });
                         }
 
-                        //Debug 
+                        //Debug
                         /*
                         DynUI.ImageButton(operatorsDiv, (button, icon) =>
                         {

@@ -170,10 +170,7 @@ namespace Configgy
             {
                 DynUI.Dropdown(r, SetDropdown);
             },
-            (rBS) =>
-            {
-                
-            });
+            null);
         }
 
         protected override void RefreshElementValueCore()

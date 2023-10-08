@@ -23,6 +23,15 @@ namespace Configgy.UI
             closeButton.onClick.AddListener(Close);
         }
 
+        private void Update()
+        {
+            if (Input.GetKeyDown(KeyCode.Escape))
+                Close();
+
+            if(Input.GetKeyDown(KeyCode.Backspace))
+                Back();
+        }
+
         public void SetParent(ConfigurationPage page)
         { 
             Parent = page; 

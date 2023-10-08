@@ -56,10 +56,7 @@ namespace Configgy
                 });
                 DynUI.Slider(r, SetSlider);
             },
-            (rBS) =>
-            {
-
-            });
+            null);
         }
     }
 }

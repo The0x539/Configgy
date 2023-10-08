@@ -23,6 +23,7 @@ namespace Configgy.UI
 
         ConfigurationPage lastOpenPage;
 
+        private static Action onGlobalOpen;
         private bool menuOpen = false;
 
         private void Awake()
@@ -30,6 +31,7 @@ namespace Configgy.UI
             if (!menuBuilt)
                 BuildMenus(ConfigurationManager.GetMenus());
 
+            onGlobalOpen += OpenMenu;
             ConfigurationManager.OnMenusChanged += BuildMenus;
         }
 
@@ -82,6 +84,8 @@ namespace Configgy.UI
         private void BuildMenus(ConfigBuilder[] menus)
         {
             DestroyPages();
+
+            Debug.Log($"Building Configgy Menus {menus.Length}");
 
             NewPage((mainPage) =>
             {
@@ -200,6 +204,9 @@ namespace Configgy.UI
 
         public void OpenMenu()
         {
+            if (menuOpen)
+                return;
+
             menus = transform.GetChildren().Select(x=>x.gameObject).ToArray();
          
             GameState ufgInvState = new GameState("cfg_menu", menus);
@@ -221,6 +228,11 @@ namespace Configgy.UI
             menuOpen = true;
         }
 
+        public static void Open()
+        {
+            onGlobalOpen?.Invoke();
+        }
+
         private void Unpause()
         {
             GameStateManager.Instance.PopState("cfg_menu");
@@ -232,6 +244,7 @@ namespace Configgy.UI
         private void OnDestroy()
         {
             ConfigurationManager.OnMenusChanged -= BuildMenus;
+            onGlobalOpen -= OpenMenu;
         }
     }
 }

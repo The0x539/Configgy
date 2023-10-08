@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using UnityEngine;
 
 namespace Configgy
 {
@@ -36,16 +38,49 @@ namespace Configgy
         internal static void SetObjectAtAddress(string address, object value)
         {
             Data.Config.Data.Configgables[address] = value;
+            Initialize();
         }
 
         internal static void Save()
         {
-            Data.Config.Save();
+            saveNextFrame = true;
         }
 
         internal static void SubMenuElementsChanged() 
         {
             OnMenusChanged?.Invoke(GetMenus());
+        }
+
+        private static bool initialized;
+        private static bool saveNextFrame;
+        private static IEnumerator SaveChecker()
+        {
+            while (true)
+            {
+                yield return new WaitForEndOfFrame();
+                if (saveNextFrame)
+                {
+                    SaveData();
+                    saveNextFrame = false;
+                }
+            }
+        }
+
+        private static void SaveData()
+        {
+            Data.Config.Save();
+        }
+
+        private static void Initialize()
+        {
+            if (initialized)
+                return;
+
+            initialized = true;
+            GameObject saveChecker = new GameObject("Configgy_Saver");
+            BehaviourRelay br = saveChecker.AddComponent<BehaviourRelay>();
+            br.StartCoroutine(SaveChecker());
+            GameObject.DontDestroyOnLoad(saveChecker);
         }
     }
 }

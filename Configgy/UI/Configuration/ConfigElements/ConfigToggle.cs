@@ -48,10 +48,7 @@ namespace Configgy
             {
                 DynUI.Toggle(r, SetToggle);
             },
-            (rBS) =>
-            {
-
-            });
+            null);
         }
     }
 }
