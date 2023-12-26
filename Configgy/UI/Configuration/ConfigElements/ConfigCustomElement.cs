@@ -5,19 +5,21 @@ namespace Configgy
 {
     public class ConfigCustomElement : IConfigElement
     {
-        private Action<Configgable, RectTransform> onBuild;
+        private Action<ConfiggableAttribute, RectTransform> onBuild;
 
-        private Configgable configgable;
+        private ConfiggableAttribute configgable;
+
+        protected ConfigBuilder config;
 
         public Action OnMenuClosed;
         public Action OnMenuOpened;
 
-        public ConfigCustomElement(Action<Configgable, RectTransform> onBuild)
+        public ConfigCustomElement(Action<ConfiggableAttribute, RectTransform> onBuild)
         {
             this.onBuild = onBuild;
         }
         
-        public void BindDescriptor(Configgable configgable)
+        public void BindDescriptor(ConfiggableAttribute configgable)
         {
             this.configgable = configgable;
         }
@@ -27,7 +29,7 @@ namespace Configgy
             onBuild?.Invoke(configgable, rect);
         }
 
-        public Configgable GetDescriptor()
+        public ConfiggableAttribute GetDescriptor()
         {
             return configgable;
         }
@@ -35,12 +37,16 @@ namespace Configgy
         public void OnMenuOpen()
         {
             OnMenuOpened?.Invoke();
-
         }
 
         public void OnMenuClose()
         {
             OnMenuClosed?.Invoke();
+        }
+
+        public void BindConfig(ConfigBuilder configBuilder)
+        {
+            config = configBuilder;
         }
     }
 }

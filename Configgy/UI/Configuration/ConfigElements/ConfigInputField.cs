@@ -93,7 +93,7 @@ namespace Configgy
             instancedField.SetTextWithoutNotify(GetValue().ToString());
         }
 
-        protected override void BuildElementCore(Configgable configgable, RectTransform rect)
+        protected override void BuildElementCore(ConfiggableAttribute configgable, RectTransform rect)
         {
             DynUI.ConfigUI.CreateElementSlot(rect, this, (r) =>
             {

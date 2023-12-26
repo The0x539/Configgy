@@ -60,15 +60,14 @@ namespace Configgy
         protected override void LoadValueCore()
         {
             //Get value from data manager.
-            object obj = ConfigurationManager.GetObjectAtAddress(descriptor.SerializationAddress);
 
             firstLoadDone = true;
 
-            if (obj != null)
+            if (config.TryGetValueAtAddress<int>(descriptor.SerializationAddress, out int value))
             {
                 try
                 {
-                    SetIndexCore((int) obj);
+                    SetIndexCore(value);
                     return;
                 }
                 catch (Exception ex)
@@ -84,8 +83,8 @@ namespace Configgy
         protected override void SaveValueCore()
         {
             object obj = currentIndex; //We dont serialize the value, we serialize the index.
-            ConfigurationManager.SetObjectAtAddress(descriptor.SerializationAddress, obj);
-            ConfigurationManager.Save();
+            config.SetValueAtAddress(descriptor.SerializationAddress, obj);
+            config.SaveDeferred();
             IsDirty = false;
         }
 
@@ -164,7 +163,7 @@ namespace Configgy
         }
 
 
-        protected override void BuildElementCore(Configgable configgable, RectTransform rect)
+        protected override void BuildElementCore(ConfiggableAttribute configgable, RectTransform rect)
         {
             DynUI.ConfigUI.CreateElementSlot(rect, this, (r) =>
             {

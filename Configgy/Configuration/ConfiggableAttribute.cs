@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 namespace Configgy
 {
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Method)]
-    public class Configgable : Attribute
+    public class ConfiggableAttribute : Attribute
     {
         public string Path { get; }
         public string DisplayName { get; private set; }
@@ -16,7 +16,7 @@ namespace Configgy
         public ConfigBuilder Owner { get; private set; }
 
 
-        public Configgable(string path = "", string displayName = null, int orderInList = 0, string description = null) 
+        public ConfiggableAttribute(string path = "", string displayName = null, int orderInList = 0, string description = null) 
         {
             this.Path = path;
             this.DisplayName = displayName;

@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Reflection;
 using UnityEngine;
 
@@ -60,23 +63,29 @@ namespace Configgy
                 }
             }
 
-            Initialized = true;
+            foreach (var element in _configElements)
+            {
+                element.BindConfig(this);
+            }
+
+            CreateSaverObject();
+
             OnConfigElementsChanged += (v) => ConfigurationManager.SubMenuElementsChanged();
             OnConfigElementsChanged?.Invoke(_configElements.ToArray());
+
+            Initialized = true;
             ConfigurationManager.RegisterConfiguraitonMenu(this);
         }
 
-        public Action<IConfigElement[]> OnConfigElementsChanged;
+        public event Action<IConfigElement[]> OnConfigElementsChanged;
 
         public IConfigElement[] GetConfigElements()
         {
             return configElements;
         }
 
-
         private Assembly currentAssembly;
         private Type currentType;
-
 
         private void ProcessMethod(MethodInfo method)
         {
@@ -89,7 +98,7 @@ namespace Configgy
             if (method.GetParameters().Length > 0)
                 return;
 
-            Configgable cfg = method.GetCustomAttribute<Configgable>();
+            ConfiggableAttribute cfg = method.GetCustomAttribute<ConfiggableAttribute>();
 
             if (cfg == null)
                 return;
@@ -108,7 +117,7 @@ namespace Configgy
             if (!field.IsStatic) //no instance!!
                 return;
 
-            Configgable cfg = field.GetCustomAttribute<Configgable>();
+            ConfiggableAttribute cfg = field.GetCustomAttribute<ConfiggableAttribute>();
 
             if (cfg == null)
                 return;
@@ -138,7 +147,7 @@ namespace Configgy
             if (!property.CanRead)
                 return;
 
-            Configgable cfg = property.GetCustomAttribute<Configgable>();
+            ConfiggableAttribute cfg = property.GetCustomAttribute<ConfiggableAttribute>();
 
             if (cfg == null)
                 return;
@@ -160,7 +169,7 @@ namespace Configgy
             }
         }
 
-        private void RegisterMethodAsButton(Configgable descriptor, MethodInfo method)
+        private void RegisterMethodAsButton(ConfiggableAttribute descriptor, MethodInfo method)
         {
             ConfigButton button = new ConfigButton(() =>
             {
@@ -171,22 +180,25 @@ namespace Configgy
             RegisterElementCore(descriptor, button);
         }
 
-        private void RegisterElementCore(Configgable descriptor, IConfigElement configElement)
+        private void RegisterElementCore(ConfiggableAttribute descriptor, IConfigElement configElement)
         {
             configElement.BindDescriptor(descriptor);
             _configElements.Add(configElement);
         }
 
-        public void RegisterElement(Configgable descriptor, IConfigElement configElement)
+        public void RegisterElement(ConfiggableAttribute descriptor, IConfigElement configElement)
         {
             if (!Initialized)
                 Build();
 
             RegisterElementCore(descriptor, configElement);
+
+            if(Initialized)
+                OnConfigElementsChanged?.Invoke(_configElements.ToArray());
         }
 
 
-        private void RegisterPrimitive(Configgable descriptor, FieldInfo field)
+        private void RegisterPrimitive(ConfiggableAttribute descriptor, FieldInfo field)
         {
             if (field.FieldType == typeof(float))
             {
@@ -252,24 +264,167 @@ namespace Configgy
                 stringElement.BindDescriptor(descriptor);
                 RegisterElementCore(descriptor, stringElement);
             }
+
+            if (field.FieldType == typeof(Color))
+            {
+                Color baseValue = (Color)field.GetValue(null);
+                ConfigColor colorElement = new ConfigColor(baseValue);
+                colorElement.OnValueChanged += (v) => field.SetValue(null, v);
+                colorElement.BindDescriptor(descriptor);
+                RegisterElementCore(descriptor, colorElement);
+            }
         }
 
-        public object GetValueAtAddress(string address)
-        {
-            if (!Data.Config.Data.Configgables.ContainsKey(address))
-                return null;
+        List<SerializedConfiggable> _data;
 
-            return Data.Config.Data.Configgables[address];
+        private List<SerializedConfiggable> data
+        {
+            get
+            {
+                if(_data == null)
+                {
+                    LoadData();
+                }
+                return _data;
+            }
         }
 
-        public void SetValueAtAddress(string address, object value)
+        internal void LoadData()
         {
-            Data.Config.Data.Configgables[address] = value;
+            string folderPath = HydraDynamics.DataPersistence.DataManager.GetDataPath("Configurations", owner.GetName().Name);
+            string filePath = Path.Combine(folderPath, GUID+".json");
+
+            List<SerializedConfiggable> loadedData = new List<SerializedConfiggable>();
+
+
+            if (!File.Exists(filePath))
+            {
+                string json = Newtonsoft.Json.JsonConvert.SerializeObject(loadedData);
+                File.WriteAllText(filePath, json);
+            }
+            else
+            {
+                try
+                {
+                    string json = File.ReadAllText(filePath);
+                    loadedData = Newtonsoft.Json.JsonConvert.DeserializeObject<List<SerializedConfiggable>>(json);
+                    Debug.Log($"Loaded Config {GUID} with {loadedData.Count} values");
+                }catch (System.Exception ex)
+                {
+                    Debug.LogError("Error Loading Configgy Data!");
+                    Debug.LogException(ex);
+
+                    int count = 0;
+                    while(File.Exists(filePath+$".backup{((count > 0) ? $" ({count})": "")}"))
+                    {
+                        count++;
+                    }
+
+                    Debug.Log("Created configgy file backup.");
+                    File.Copy(filePath, filePath + $".backup{((count > 0) ? $" ({count})" : "")}");
+                    File.Delete(filePath);
+
+                    loadedData = new List<SerializedConfiggable>();
+                }
+            }
+
+            //Remove null values.
+            loadedData = loadedData.Where(x => x.IsValid()).ToList();
+            
+            _data = loadedData;
         }
 
-        public void Save()
+        public void SaveData()
         {
-            Data.Config.Save();
+            if (_data == null)
+                return;
+
+            string folderPath = HydraDynamics.DataPersistence.DataManager.GetDataPath("Configurations", owner.GetName().Name);
+
+            string filePath = Path.Combine(folderPath, GUID + ".json");
+            string json = Newtonsoft.Json.JsonConvert.SerializeObject(_data, Newtonsoft.Json.Formatting.Indented);
+            File.WriteAllText(filePath, json);
+        }
+
+        private bool saveNextFrame;
+
+        internal void SaveDeferred()
+        {
+            saveNextFrame = true;
+        }
+
+        private IEnumerator SaveChecker()
+        {
+            while (true)
+            {
+                yield return new WaitForEndOfFrame();
+                if (saveNextFrame)
+                {
+                    SaveData();
+                    saveNextFrame = false;
+                }
+            }
+        }
+
+
+        internal void CreateSaverObject()
+        {
+            GameObject saveChecker = new GameObject($"Configgy_Saver ({GUID})");
+            BehaviourRelay br = saveChecker.AddComponent<BehaviourRelay>();
+            br.StartCoroutine(SaveChecker());
+            GameObject.DontDestroyOnLoad(saveChecker);
+        }
+
+        //Load config data.
+
+        internal T GetValueAtAddress<T>(string address)
+        {
+            foreach (var sc in data)
+            {
+                if (sc.key == address)
+                    return sc.GetValue<T>();
+            }
+
+            return default(T);
+        }
+
+        internal bool TryGetValueAtAddress<T>(string address, out T value)
+        {
+            value = default(T);
+
+            foreach (var sc in data)
+            {
+                if (sc.key == address)
+                {
+                    try
+                    {
+                        value = sc.GetValue<T>();
+                        return true;
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogError("Failed to deserialize value");
+                        Debug.LogException(ex);
+                        break;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        internal void SetValueAtAddress(string address, object value)
+        {
+            foreach (var sc in data)
+            {
+                if (sc.key == address)
+                {
+                    sc.SetValue(value);
+                    return;
+                }
+            }
+
+            data.Add(new SerializedConfiggable(address, value));
         }
     }
 }

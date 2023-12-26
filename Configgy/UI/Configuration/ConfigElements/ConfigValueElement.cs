@@ -8,11 +8,13 @@ namespace Configgy
     {
         public T DefaultValue { get; }
 
-        private T? value;
+        protected T? value;
 
         public Action<T> OnValueChanged;
 
-        protected Configgable descriptor;
+        protected ConfiggableAttribute descriptor;
+
+        protected ConfigBuilder config;
 
         private bool initialized => descriptor != null;
         protected bool firstLoadDone = false;
@@ -46,15 +48,14 @@ namespace Configgy
         {
             //Get value from data manager.
             //This should probably be changed to something more reliable and not static.
-            object obj = ConfigurationManager.GetObjectAtAddress(descriptor.SerializationAddress);
 
             firstLoadDone = true; //nullable values apparently can just randomly have values so this annoying bool is needed
 
-            if (obj != null)
+            if (config.TryGetValueAtAddress<T>(descriptor.SerializationAddress, out T value))
             {
                 try
                 {
-                    SetValue((T)obj);
+                    SetValue(value);
                     return;
                 } catch(Exception ex)
                 {
@@ -75,8 +76,8 @@ namespace Configgy
         protected virtual void SaveValueCore()
         {
             object obj = GetValue();
-            ConfigurationManager.SetObjectAtAddress(descriptor.SerializationAddress, obj);
-            ConfigurationManager.Save();
+            config.SetValueAtAddress(descriptor.SerializationAddress, obj);
+            config.SaveDeferred();
             IsDirty = false;
         }
 
@@ -95,7 +96,6 @@ namespace Configgy
             
             return value;
         }
-
 
         public void SetValue(T value)
         {
@@ -119,12 +119,12 @@ namespace Configgy
             SetValue(DefaultValue);
         }
 
-        public void BindDescriptor(Configgable configgable)
+        public void BindDescriptor(ConfiggableAttribute configgable)
         {
             this.descriptor = configgable;
         }
 
-        public Configgable GetDescriptor()
+        public ConfiggableAttribute GetDescriptor()
         {
             return descriptor;
         }
@@ -137,7 +137,7 @@ namespace Configgy
             BuildElementCore(descriptor, rect);
         }
 
-        protected abstract void BuildElementCore(Configgable descriptor, RectTransform rect);
+        protected abstract void BuildElementCore(ConfiggableAttribute descriptor, RectTransform rect);
 
         public override string ToString()
         {
@@ -160,6 +160,11 @@ namespace Configgy
         {
             if(IsDirty)
                 SaveValue();
+        }
+
+        public void BindConfig(ConfigBuilder config)
+        {
+            this.config = config;
         }
     }
 }

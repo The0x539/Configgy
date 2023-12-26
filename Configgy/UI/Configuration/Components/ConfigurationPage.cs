@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Configgy.UI
@@ -28,8 +29,20 @@ namespace Configgy.UI
             if (Input.GetKeyDown(KeyCode.Escape))
                 Close();
 
-            if(Input.GetKeyDown(KeyCode.Backspace))
-                Back();
+            if (Input.GetKeyDown(KeyCode.Backspace))
+                BackspacePressed();
+        }
+
+        private void BackspacePressed()
+        {
+            //Prevent backspace from closing the menu if an input field is focused
+            foreach (var inputField in contentBody.GetComponentsInChildren<InputField>(true))
+            {
+                if (inputField.isFocused)
+                    return;
+            }
+
+            Back();
         }
 
         public void SetParent(ConfigurationPage page)

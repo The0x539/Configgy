@@ -42,7 +42,7 @@ namespace Configgy
             SetValue(newValue);
         }
 
-        protected override void BuildElementCore(Configgable descriptor, RectTransform rect)
+        protected override void BuildElementCore(ConfiggableAttribute descriptor, RectTransform rect)
         {
             DynUI.ConfigUI.CreateElementSlot(rect, this, (r) =>
             {

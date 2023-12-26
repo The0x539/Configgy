@@ -16,14 +16,14 @@ namespace Configgy
             this.label = label;
         }
 
-        private Configgable descriptor;
+        private ConfiggableAttribute descriptor;
 
-        public void BindDescriptor(Configgable descriptor)
+        public void BindDescriptor(ConfiggableAttribute descriptor)
         {
             this.descriptor = descriptor;
         }
 
-        public Configgable GetDescriptor()
+        public ConfiggableAttribute GetDescriptor()
         {
             return descriptor;
         }
@@ -55,5 +55,6 @@ namespace Configgy
 
         public void OnMenuOpen() { }
         public void OnMenuClose() { }
+        public void BindConfig(ConfigBuilder configBuilder) { }
     }
 }

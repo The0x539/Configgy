@@ -176,7 +176,7 @@ namespace Configgy.UI
         
         private void BuildElement(IConfigElement element)
         {
-            Configgable descriptor = element.GetDescriptor();
+            ConfiggableAttribute descriptor = element.GetDescriptor();
             
             string path = "";
 

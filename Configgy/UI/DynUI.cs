@@ -95,7 +95,7 @@ namespace Configgy.UI
         {
             public static void CreateElementSlot<T>(RectTransform rect, ConfigValueElement<T> valueElement, Action<RectTransform> onInstance, Action<RectTransform> onButtonSlots = null)
             {
-                Configgable configgable = valueElement.GetDescriptor();
+                ConfiggableAttribute configgable = valueElement.GetDescriptor();
 
                 DynUI.Frame(rect, (f) =>
                 {

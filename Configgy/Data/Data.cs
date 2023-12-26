@@ -1,5 +1,6 @@
 ﻿using HydraDynamics.DataPersistence;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Configgy
 {
@@ -10,17 +11,45 @@ namespace Configgy
 
     public class Config : Validatable
     {
-        public Dictionary<string, object> Configgables;
+        public List<SerializedConfiggable> configgables;
+
         public override bool AllowExternalRead => false;
 
         public Config()
         {
-            Configgables = new Dictionary<string, object>();
+            configgables = new List<SerializedConfiggable>();
         }
 
         public override bool Validate()
         {
-            return Configgables != null;
+            return configgables != null;
+        }
+
+        public bool ContainsAddress(string key)
+        {
+            for(int i = 0; i < configgables.Count; i++)
+            {
+                if (configgables[i] == null)
+                    continue;
+
+                if (configgables[i].key != key)
+                    continue;
+
+                return true;
+            }
+
+            return false;
+        }
+
+        public SerializedConfiggable Get(string key)
+        {
+            for(int i = 0; i < configgables.Count; i++)
+            {
+                if (configgables[i].key == key)
+                    return configgables[i];
+            }
+
+            return null;
         }
     }
 }
