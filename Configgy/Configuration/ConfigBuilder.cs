@@ -291,7 +291,11 @@ namespace Configgy
 
         internal void LoadData()
         {
-            string folderPath = HydraDynamics.DataPersistence.DataManager.GetDataPath("Configurations", owner.GetName().Name);
+            string folderPath = Path.Combine(Paths.DataFolder, owner.GetName().Name);
+
+            if (!Directory.Exists(folderPath))
+                Directory.CreateDirectory(folderPath);
+
             string filePath = Path.Combine(folderPath, GUID+".json");
 
             List<SerializedConfiggable> loadedData = new List<SerializedConfiggable>();
@@ -339,7 +343,10 @@ namespace Configgy
             if (_data == null)
                 return;
 
-            string folderPath = HydraDynamics.DataPersistence.DataManager.GetDataPath("Configurations", owner.GetName().Name);
+            string folderPath = Path.Combine(Paths.DataFolder, owner.GetName().Name);
+
+            if (!Directory.Exists(folderPath))
+                Directory.CreateDirectory(folderPath);
 
             string filePath = Path.Combine(folderPath, GUID + ".json");
             string json = Newtonsoft.Json.JsonConvert.SerializeObject(_data, Newtonsoft.Json.Formatting.Indented);

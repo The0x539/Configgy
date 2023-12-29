@@ -1,6 +1,4 @@
 ﻿using Configgy.Assets;
-using HydraDynamics;
-using HydraDynamics.Keybinds;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,14 +15,17 @@ namespace Configgy.UI
 
         private bool menuBuilt = false;
 
-        private static Keybinding cfgKey = Hydynamics.GetKeybinding("Open Configuration Menu", KeyCode.Backslash);
+        [Configgable(displayName:"Open Config Menu")]
+        private static ConfigKeybind cfgKey = new ConfigKeybind(KeyCode.Backslash);
 
         private GameObject[] menus;
 
         ConfigurationPage lastOpenPage;
 
-        private static Action onGlobalOpen;
+        private static event Action onGlobalOpen;
+        private static event Action onGlobalClose;
         private bool menuOpen = false;
+
 
         private void Awake()
         {
@@ -32,6 +33,7 @@ namespace Configgy.UI
                 BuildMenus(ConfigurationManager.GetMenus());
 
             onGlobalOpen += OpenMenu;
+            onGlobalClose += CloseMenu;
             ConfigurationManager.OnMenusChanged += BuildMenus;
         }
 
@@ -43,7 +45,7 @@ namespace Configgy.UI
                 return;
             }
 
-            if (!cfgKey.WasPerformedThisFrame)
+            if (!cfgKey.WasPeformed())
                 return;
 
             OpenMenu();
@@ -104,14 +106,6 @@ namespace Configgy.UI
 
         private void BuildMenu(IConfigElement[] configElements)
         {
-            if(pageManifest.ContainsKey(""))
-            {
-                Debug.LogWarning("Empty key is there");
-            }else
-            {
-                Debug.LogWarning("Empty key is NOT FUCKING THERE!!!!!!!!!!");
-            }
-
             foreach (IConfigElement configElement in configElements.OrderBy(x=>x.GetDescriptor().Path))
             {
                 BuildElement(configElement);
@@ -128,6 +122,18 @@ namespace Configgy.UI
         private void BuildMenuTreeFromPath(string fullPath)
         {
             string[] path = fullPath.Split('/');
+
+            if (path.Length > 0)
+            {
+                if (path[0] == "Configgy")
+                {
+                    for(int i = 0; i < path.Length; i++)
+                    {
+                        Debug.Log($"PATH{i}:{path[i]}");
+                    }
+                }
+            }
+
             string currentPathAddress = "";
 
             ConfigurationPage previousPage = null;
@@ -182,8 +188,9 @@ namespace Configgy.UI
 
             if (descriptor != null && descriptor.Owner != null)
             {
-                path = descriptor.Path;
-                path = $"{descriptor.Owner.OwnerDisplayName}/"+path;
+                path = $"{descriptor.Owner.OwnerDisplayName}";
+                if(!string.IsNullOrEmpty(descriptor.Path))
+                    path += $"/{descriptor.Path}";
             }else
             {
                 path = "/Other";
@@ -202,6 +209,8 @@ namespace Configgy.UI
             onInstance?.Invoke(page);
         }
 
+        
+
         public void OpenMenu()
         {
             if (menuOpen)
@@ -209,16 +218,16 @@ namespace Configgy.UI
 
             menus = transform.GetChildren().Select(x=>x.gameObject).ToArray();
          
-            GameState ufgInvState = new GameState("cfg_menu", menus);
+            GameState configState = new GameState("cfg_menu", menus);
             
-            ufgInvState.cursorLock = LockMode.Unlock;
-            ufgInvState.playerInputLock = LockMode.Lock;
-            ufgInvState.cameraInputLock = LockMode.Lock;
-            ufgInvState.priority = 20;
+            configState.cursorLock = LockMode.Unlock;
+            configState.playerInputLock = LockMode.Lock;
+            configState.cameraInputLock = LockMode.Lock;
+            configState.priority = 20;
 
             OptionsManager.Instance.paused = true;
             Time.timeScale = 0f;
-            GameStateManager.Instance.RegisterState(ufgInvState);
+            GameStateManager.Instance.RegisterState(configState);
 
             if (lastOpenPage != null)
                 lastOpenPage.Open();
@@ -228,9 +237,27 @@ namespace Configgy.UI
             menuOpen = true;
         }
 
+        public void CloseMenu()
+        {
+            if (!menuOpen)
+                return;
+
+            menus = transform.GetChildren().Select(x => x.gameObject).ToArray();
+            for(int i = 0; i < menus.Length; i++)
+            {
+                menus[i].SetActive(false);
+            }
+        }
+
+
         public static void Open()
         {
             onGlobalOpen?.Invoke();
+        }
+
+        public static void Close()
+        {
+            onGlobalClose?.Invoke();
         }
 
         private void Unpause()
@@ -245,6 +272,8 @@ namespace Configgy.UI
         {
             ConfigurationManager.OnMenusChanged -= BuildMenus;
             onGlobalOpen -= OpenMenu;
+            onGlobalClose -= CloseMenu;
+
         }
     }
 }

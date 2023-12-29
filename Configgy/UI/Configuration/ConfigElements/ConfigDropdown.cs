@@ -29,7 +29,9 @@ namespace Configgy
             string[] names = new string[values.Length];
 
             if (providedNames == null)
-                providedNames = Array.Empty<string>();
+            {
+                return values.Select(x => x.ToString()).ToArray();
+            }
 
             for (int i = 0; i < values.Length; i++)
             {

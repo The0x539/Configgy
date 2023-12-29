@@ -88,9 +88,6 @@
 	<Reference Include="NewBlood">
 		<HintPath>$(ULTRAKILLPath)\ULTRAKILL_Data\Managed\NewBlood.LegacyInput.dll</HintPath>
 	</Reference>
-	<Reference Include="HydraDynamics">
-		<HintPath>$(ULTRAKILLPath)\BepInEx\plugins\HydraDynamics\HydraDynamics.dll</HintPath>
-	</Reference>
   </ItemGroup>
   
   <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">

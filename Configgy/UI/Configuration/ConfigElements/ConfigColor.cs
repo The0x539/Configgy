@@ -57,15 +57,6 @@ namespace Configgy
             colorDisplay.color = color;
         }
 
-        protected override Color GetValueCore()
-        {
-            if (value == null || !firstLoadDone)
-            {
-                LoadValue();
-            }
-
-            return value;
-        }
 
         protected override void LoadValueCore()
         {

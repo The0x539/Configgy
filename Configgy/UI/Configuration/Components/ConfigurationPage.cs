@@ -18,6 +18,8 @@ namespace Configgy.UI
         
         private List<IConfigElement> elements = new List<IConfigElement>();
 
+        public bool preventClosing = false;
+
         private void Start()
         {
             backButton.onClick.AddListener(Back);
@@ -27,14 +29,25 @@ namespace Configgy.UI
         private void Update()
         {
             if (Input.GetKeyDown(KeyCode.Escape))
-                Close();
+                EscapePressed();
 
             if (Input.GetKeyDown(KeyCode.Backspace))
                 BackspacePressed();
         }
 
+        private void EscapePressed()
+        {
+            if (preventClosing)
+                return;
+
+            Close();
+        }
+
         private void BackspacePressed()
         {
+            if (preventClosing)
+                return;
+
             //Prevent backspace from closing the menu if an input field is focused
             foreach (var inputField in contentBody.GetComponentsInChildren<InputField>(true))
             {
