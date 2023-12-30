@@ -29,7 +29,7 @@ namespace Configgy
             VersionCheck.CheckVersion(ConstInfo.GITHUB_VERSION_URL, ConstInfo.VERSION, (r, latest) =>
             {
                 UsingLatest = r;
-                if(!UsingLatest)
+                if (!UsingLatest)
                     LatestVersion = latest;
             });
 
