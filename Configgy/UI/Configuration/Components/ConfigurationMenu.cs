@@ -209,25 +209,13 @@ namespace Configgy.UI
             onInstance?.Invoke(page);
         }
 
-        
-
         public void OpenMenu()
         {
             if (menuOpen)
                 return;
 
             menus = transform.GetChildren().Select(x=>x.gameObject).ToArray();
-         
-            GameState configState = new GameState("cfg_menu", menus);
-            
-            configState.cursorLock = LockMode.Unlock;
-            configState.playerInputLock = LockMode.Lock;
-            configState.cameraInputLock = LockMode.Lock;
-            configState.priority = 20;
-
-            OptionsManager.Instance.paused = true;
-            Time.timeScale = 0f;
-            GameStateManager.Instance.RegisterState(configState);
+            Pauser.Pause(menus);
 
             if (lastOpenPage != null)
                 lastOpenPage.Open();
@@ -262,9 +250,7 @@ namespace Configgy.UI
 
         private void Unpause()
         {
-            GameStateManager.Instance.PopState("cfg_menu");
-            OptionsManager.Instance.paused = false;
-            Time.timeScale = 1f;
+            Pauser.Unpause();
             menuOpen = false;
         }
 

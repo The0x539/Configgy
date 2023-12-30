@@ -31,6 +31,7 @@ namespace Configgy.Assets
             DropdownPrefab = assetLoader.LoadAsset<GameObject>("UI_Dropdown");
             ConfigurationPage = assetLoader.LoadAsset<GameObject>("ConfigurationPage");
             ConfigurationMenu = assetLoader.LoadAsset<GameObject>("ConfigurationMenu");
+            ModalDialogueManager = assetLoader.LoadAsset<GameObject>("ModalDialogueManager");
         }
 
         public static GameObject ConfigurationPage { get; private set; }
@@ -44,6 +45,8 @@ namespace Configgy.Assets
         public static GameObject InputFieldPrefab { get; private set; }
         public static GameObject TogglePrefab { get; private set; }
         public static GameObject DropdownPrefab { get; private set; }
+        public static GameObject ModalDialogueManager { get; private set; }
+
 
     }
 }

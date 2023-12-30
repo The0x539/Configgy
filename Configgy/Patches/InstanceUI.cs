@@ -20,6 +20,12 @@ namespace Configgy.Patches
             CanvasRect = __instance.GetComponent<RectTransform>();
             GameObject.Instantiate(PluginAssets.ConfigurationMenu, CanvasRect);
             InstanceOpenConfigButton(CanvasRect);
+            InstanceModalDialogueManager(CanvasRect);
+        }
+
+        private static void InstanceModalDialogueManager(RectTransform rect)
+        {
+            GameObject modalDialogueManagerObject = GameObject.Instantiate(PluginAssets.ModalDialogueManager, rect);
         }
 
         private static void InstanceOpenConfigButton(RectTransform rect)
