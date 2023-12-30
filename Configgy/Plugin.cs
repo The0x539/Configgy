@@ -12,6 +12,11 @@ namespace Configgy
 
         private ConfigBuilder configgyConfig;
 
+        public static bool UsingLatest = true;
+        public static string LatestVersion { get; private set; } = ConstInfo.VERSION;
+
+    
+
         private void Awake()
         {
             PluginAssets.Initialize();
@@ -20,6 +25,13 @@ namespace Configgy
 
             configgyConfig = new ConfigBuilder(ConstInfo.GUID, "Configgy");
             configgyConfig.Build();
+
+            VersionCheck.CheckVersion(ConstInfo.GITHUB_VERSION_URL, ConstInfo.VERSION, (r, latest) =>
+            {
+                UsingLatest = r;
+                if(!UsingLatest)
+                    LatestVersion = latest;
+            });
 
             Logger.LogInfo($"Plugin {ConstInfo.NAME} is loaded!");
         }

@@ -18,6 +18,9 @@ namespace Configgy.UI
         [Configgable(displayName:"Open Config Menu")]
         private static ConfigKeybind cfgKey = new ConfigKeybind(KeyCode.Backslash);
 
+        [Configgable(displayName: "Notify When Update Available")]
+        private static ConfigToggle notifyOnUpdateAvailable = new ConfigToggle(true);
+
         private GameObject[] menus;
 
         ConfigurationPage lastOpenPage;
@@ -26,6 +29,7 @@ namespace Configgy.UI
         private static event Action onGlobalClose;
         private bool menuOpen = false;
 
+        private static bool openedOnce;
 
         private void Awake()
         {
@@ -223,6 +227,49 @@ namespace Configgy.UI
                 rootPage.Open();
             
             menuOpen = true;
+
+            if (!openedOnce)
+            {
+                openedOnce = true;
+                if (!Plugin.UsingLatest && notifyOnUpdateAvailable.Value)
+                {
+                    ShowUpdatePrompt();
+                }
+            }
+
+        }
+
+        private void ShowUpdatePrompt()
+        {
+            ModalDialogue.ShowDialogue(new ModalDialogueEvent()
+            {
+                Title = "Outdated",
+                Message = $"You are using an outdated version of Configgy: (<color=red>{ConstInfo.VERSION}</color>). Please update to the latest version: (<color=green>{Plugin.LatestVersion}</color>)",
+                Options = new DialogueBoxOption[]
+                        {
+                            new DialogueBoxOption()
+                            {
+                                Name = "Open Browser",
+                                Color = Color.white,
+                                OnClick = () => Application.OpenURL(ConstInfo.GITHUB_URL+"/releases")
+                            },
+                            new DialogueBoxOption()
+                            {
+                                Name = "Later",
+                                Color = Color.white,
+                                OnClick = () => { }
+                            },
+                            new DialogueBoxOption()
+                            {
+                                Name = "Don't Ask Again.",
+                                Color = Color.red,
+                                OnClick = () =>
+                                {
+                                    notifyOnUpdateAvailable.SetValue(false);
+                                }
+                            }
+                        }
+            });
         }
 
         public void CloseMenu()
