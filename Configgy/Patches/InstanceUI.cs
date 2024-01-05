@@ -41,6 +41,8 @@ namespace Configgy.Patches
 
             DynUI.ImageButton(pauseMenuRect, (b,i) =>
             {
+                i.sprite = PluginAssets.Icon_Configgy;
+
                 RectTransform buttonRect = b.GetComponent<RectTransform>();
                 buttonRect.SetAnchors(0.5f,0.5f,0.5f,0.5f);
                 buttonRect.sizeDelta = new Vector2(buttonHeight, buttonHeight);

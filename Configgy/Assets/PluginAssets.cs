@@ -29,9 +29,13 @@ namespace Configgy.Assets
             InputFieldPrefab = assetLoader.LoadAsset<GameObject>("UI_InputField");
             TogglePrefab = assetLoader.LoadAsset<GameObject>("UI_Toggle");
             DropdownPrefab = assetLoader.LoadAsset<GameObject>("UI_Dropdown");
+            DescriptionPrefab = assetLoader.LoadAsset<GameObject>("UI_Description");
             ConfigurationPage = assetLoader.LoadAsset<GameObject>("ConfigurationPage");
             ConfigurationMenu = assetLoader.LoadAsset<GameObject>("ConfigurationMenu");
             ModalDialogueManager = assetLoader.LoadAsset<GameObject>("ModalDialogueManager");
+            Icon_Reset = assetLoader.LoadAsset<Sprite>("Icon_Reset");
+            Icon_Info = assetLoader.LoadAsset<Sprite>("Icon_Info");
+            Icon_Configgy = assetLoader.LoadAsset<Sprite>("Icon_Configgy");
         }
 
         public static GameObject ConfigurationPage { get; private set; }
@@ -46,6 +50,10 @@ namespace Configgy.Assets
         public static GameObject TogglePrefab { get; private set; }
         public static GameObject DropdownPrefab { get; private set; }
         public static GameObject ModalDialogueManager { get; private set; }
+        public static GameObject DescriptionPrefab { get; private set; }
+        public static Sprite Icon_Reset { get; private set; }
+        public static Sprite Icon_Info { get; private set; }
+        public static Sprite Icon_Configgy { get; private set; }
 
 
     }

@@ -74,6 +74,8 @@ namespace Configgy
                 Text text = buttonObject.GetComponentInChildren<Text>();
                 Image image = buttonObject.GetComponentsInChildren<Image>().Where(x => x.name == "Border").FirstOrDefault();
 
+                spawnedButtons.Add(buttonObject);
+
                 text.color = option.Color;
                 text.text = option.Name;
                 image.color = option.Color;

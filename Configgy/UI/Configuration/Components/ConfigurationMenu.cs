@@ -127,17 +127,6 @@ namespace Configgy.UI
         {
             string[] path = fullPath.Split('/');
 
-            if (path.Length > 0)
-            {
-                if (path[0] == "Configgy")
-                {
-                    for(int i = 0; i < path.Length; i++)
-                    {
-                        Debug.Log($"PATH{i}:{path[i]}");
-                    }
-                }
-            }
-
             string currentPathAddress = "";
 
             ConfigurationPage previousPage = null;
@@ -244,14 +233,14 @@ namespace Configgy.UI
             ModalDialogue.ShowDialogue(new ModalDialogueEvent()
             {
                 Title = "Outdated",
-                Message = $"You are using an outdated version of Configgy: (<color=red>{ConstInfo.VERSION}</color>). Please update to the latest version: (<color=green>{Plugin.LatestVersion}</color>)",
+                Message = $"You are using an outdated version of {ConstInfo.NAME}: (<color=red>{ConstInfo.VERSION}</color>). Please update to the latest version from Github or Thunderstore: (<color=green>{Plugin.LatestVersion}</color>)",
                 Options = new DialogueBoxOption[]
                         {
                             new DialogueBoxOption()
                             {
                                 Name = "Open Browser",
                                 Color = Color.white,
-                                OnClick = () => Application.OpenURL(ConstInfo.GITHUB_URL+"/releases")
+                                OnClick = () => Application.OpenURL(ConstInfo.GITHUB_URL+"/releases/latest")
                             },
                             new DialogueBoxOption()
                             {

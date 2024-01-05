@@ -69,6 +69,14 @@ namespace Configgy.UI
             onInstance?.Invoke(div.AddComponent<RectTransform>());
         }
 
+        public static void Description(RectTransform rect, Action<RectTransform, Text> onInstance)
+        {
+            GameObject description = GameObject.Instantiate(PluginAssets.DescriptionPrefab, rect);
+            RectTransform rectTransform = description.GetComponent<RectTransform>();
+            Text text = description.GetComponentInChildren<Text>();
+            onInstance?.Invoke(rectTransform, text);
+        }
+
         public static void Component<T>(Transform transform, Action<T> onInstance) where T : Component
         {
             onInstance?.Invoke(transform.gameObject.AddComponent<T>());
@@ -99,6 +107,9 @@ namespace Configgy.UI
 
                 DynUI.Frame(rect, (f) =>
                 {
+
+                    f.RectTransform.sizeDelta = new Vector2(f.RectTransform.sizeDelta.x, 55f);
+
                     DynUI.Div(f.Content, (operatorsDiv) =>
                     {
                         operatorsDiv.SetAnchors(0, 0, 0.2f, 1f);
@@ -117,7 +128,8 @@ namespace Configgy.UI
                         DynUI.ImageButton(operatorsDiv, (button, icon) =>
                         {
                             RectTransform rt = button.GetComponent<RectTransform>();
-                            rt.sizeDelta = new Vector2(55f, 55f);
+                            rt.sizeDelta = new Vector2(40f, 40f);
+                            icon.sprite = PluginAssets.Icon_Reset;
                             button.onClick.AddListener(valueElement.ResetValue);
                         });
 
@@ -125,30 +137,18 @@ namespace Configgy.UI
                         {
                             GameObject newDescriptionBox = null;
 
-                            DynUI.Frame(rect, (f) =>
+                            DynUI.Description(rect, (r, desc) =>
                             {
-                                newDescriptionBox = f.gameObject;
-
-                                DynUI.Component<ContentSizeFitter>(f.RectTransform, (csf) =>
-                                {
-                                    csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-                                });
-
-                                DynUI.Label(f.Content, (t) =>
-                                {
-                                    var trt = t.GetComponent<RectTransform>();
-                                    DynUI.Layout.FillParent(f.Content);
-                                    t.text = configgable.Description;
-                                    t.resizeTextForBestFit = false;
-                                    t.fontSize = 16;
-                                    t.alignment = TextAnchor.MiddleLeft;
-                                });
+                                newDescriptionBox = r.gameObject;
+                                desc.text = configgable.Description;
+                                r.gameObject.SetActive(false);
                             });
 
                             DynUI.ImageButton(operatorsDiv, (button, icon) =>
                             {
                                 RectTransform rt = button.GetComponent<RectTransform>();
-                                rt.sizeDelta = new Vector2(55f, 55f);
+                                rt.sizeDelta = new Vector2(40f, 40f);
+                                icon.sprite = PluginAssets.Icon_Info;
                                 button.onClick.AddListener(() => newDescriptionBox.SetActive(!newDescriptionBox.activeInHierarchy));
                             });
                         }
@@ -193,7 +193,7 @@ namespace Configgy.UI
                         {
                             t.text = configgable.DisplayName;
                             t.fontSize = 4;
-                            t.resizeTextMaxSize = 26;
+                            t.resizeTextMaxSize = 25;
                         });
 
                         onInstance?.Invoke(elementsDiv);

@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
@@ -21,12 +22,15 @@ namespace Configgy
         private SerializedColor serializedColor;
 
         private Slider[] sliders;
+        private InputField hexInput;
         private Image colorDisplay;
 
         protected override void BuildElementCore(ConfiggableAttribute descriptor, RectTransform rect)
         {
             DynUI.ConfigUI.CreateElementSlot(rect, this, (r) =>
             {
+                DynUI.InputField(r, SetInputField);
+
                 for(int i = 0; i < sliders.Length; i++)
                 {
                     DynUI.Slider(r, (s) =>
@@ -79,12 +83,47 @@ namespace Configgy
             //SaveValue(); TODO idk check this.
         }
 
+        private string ToHex(Color color)
+        {
+            return $"{ColorUtility.ToHtmlStringRGBA(color)}";
+        }
+
+        private bool TryParseHex(string hex, out Color color)
+        {
+            return ColorUtility.TryParseHtmlString(hex, out color);
+        }
+
+
         protected override void SaveValueCore()
         {
             object obj = serializedColor;
             config.SetValueAtAddress(descriptor.SerializationAddress, obj);
             config.SaveDeferred();
             IsDirty = false;
+        }
+
+        private void SetInputField(InputField input)
+        {
+            if (input == null) 
+                return;
+
+            hexInput = input;
+            input.onEndEdit.AddListener((s) =>
+            {
+                //UX thing :3
+                if(!s.StartsWith("#"))
+                    s = $"#{s}";
+
+                if (TryParseHex(s, out Color color))
+                {
+                    serializedColor = new SerializedColor(color);
+                    SetValue(color);
+                }
+                else
+                {
+                    input.SetTextWithoutNotify(ToHex(serializedColor.ToColor()));
+                }
+            });
         }
 
         private void SetSlider(Slider slider, int index)
@@ -121,6 +160,8 @@ namespace Configgy
 
                 sliders[i].SetValueWithoutNotify(serializedColor[i]);
             }
+
+            hexInput.SetTextWithoutNotify(ToHex(serializedColor.ToColor()));
 
             UpdateColorDisplayColor(serializedColor.ToColor());
         }

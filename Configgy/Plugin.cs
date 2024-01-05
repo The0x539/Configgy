@@ -1,6 +1,7 @@
 ﻿using BepInEx;
 using Configgy.Assets;
 using HarmonyLib;
+using UnityEngine;
 
 namespace Configgy
 {
@@ -30,7 +31,10 @@ namespace Configgy
             {
                 UsingLatest = r;
                 if (!UsingLatest)
+                {
                     LatestVersion = latest;
+                    Debug.LogWarning($"New version of {ConstInfo.NAME} available. Current:({ConstInfo.VERSION}) Latest: ({LatestVersion})");
+                }
             });
 
             Logger.LogInfo($"Plugin {ConstInfo.NAME} is loaded!");

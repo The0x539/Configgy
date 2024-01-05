@@ -43,6 +43,8 @@ namespace Configgy
         {
             DynUI.Frame(rect, (panel) =>
             {
+                panel.RectTransform.sizeDelta = new Vector2(panel.RectTransform.sizeDelta.x, 55);
+
                 DynUI.Button(panel.RectTransform, (b) =>
                 {
                     b.GetComponentInChildren<Text>().text = GetLabel();
