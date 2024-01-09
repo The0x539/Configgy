@@ -1,188 +1,53 @@
-﻿using Configgy.UI;
+﻿using BepInEx.Configuration;
+using Configgy.UI;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace Configgy
 {
-    public class ConfigDropdown<T> : ConfigValueElement<T>
+    public class ConfigDropdown<T> : ConfigValueElement<int>
     {
-        public string[] Names { get; private set; }
-        public T[] Values { get; private set; }
+        public readonly string[] names;
+        public readonly T[] values;
+        protected Dropdown dropdown;
 
-        private int defaultIndex;
-        private int? currentIndex;
-
-        public ConfigDropdown(T[] values, string[] names = null, int defaultIndex = 0) : base(values[defaultIndex])
+        public ConfigDropdown(ConfigEntry<int> entry, T[] values, string[] names = null) : base(entry)
         {
-            this.Values = values;
-            this.Names = CreateNames(values, names);
-            this.defaultIndex = defaultIndex;
-            OnValueChanged += (_) => RefreshElementValue();
-            RefreshElementValue();
-        }
-
-        private string[] CreateNames(T[] values, string[] providedNames)
-        {
-            string[] names = new string[values.Length];
-
-            if (providedNames == null)
+            if (names == null)
             {
-                return values.Select(x => x.ToString()).ToArray();
+                names = values.Select(x => x.ToString()).ToArray();
+            }
+            else if (names.Length != values.Length)
+            {
+                throw new ArgumentException("If names are provided, there must be one name for every value", nameof(names));
             }
 
-            for (int i = 0; i < values.Length; i++)
+            this.names = names;
+            this.values = values;
+        }
+
+        protected override void OnConfigUpdate(int value)
+        {
+            dropdown.SetValueWithoutNotify(value);
+        }
+
+        protected override void BuildElement(RectTransform rect)
+        {
+            DynUI.Dropdown(rect, (dropdown) =>
             {
-                names[i] = (i < providedNames.Length) ? providedNames[i] : values[i].ToString();
-            }
-
-            return names;
+                dropdown.value = config.Value;
+                dropdown.onValueChanged.AddListener((v) => SetValueFromDropdown(dropdown, v));
+                dropdown.AddOptions(names.ToList());
+                this.dropdown = dropdown;
+            });
         }
 
-        public void SetOptions(T[] values, string[] names = null, int newIndex = 0, int defaultIndex = 0)
+        private void SetValueFromDropdown(Dropdown origin, int newValue)
         {
-            int valueLen = values.Length;
-
-            if (defaultIndex >= valueLen || defaultIndex < 0)
-                throw new IndexOutOfRangeException("Default index is out of bounds with provided values.");
-
-            if (newIndex >= valueLen || newIndex < 0)
-                throw new IndexOutOfRangeException("Default index is out of bounds with provided values.");
-
-            this.Values = values;
-            this.Names = CreateNames(values, names);
-            this.defaultIndex = defaultIndex;
-            SetIndex(newIndex);
-        }
-
-        protected Dropdown instancedDropdown;
-
-        protected override void LoadValueCore()
-        {
-            //Get value from data manager.
-
-            firstLoadDone = true;
-
-            if (config.TryGetValueAtAddress<int>(descriptor.SerializationAddress, out int value))
-            {
-                try
-                {
-                    SetIndexCore(value);
-                    return;
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogException(ex);
-                }
-            }
-
-            ResetValue();
-            SaveValue();
-        }
-
-        protected override void SaveValueCore()
-        {
-            object obj = currentIndex; //We dont serialize the value, we serialize the index.
-            config.SetValueAtAddress(descriptor.SerializationAddress, obj);
-            config.SaveDeferred();
-            IsDirty = false;
-        }
-
-        protected override void ResetValueCore()
-        {
-            SetIndexCore(defaultIndex);
-        }
-
-        protected override T GetValueCore()
-        {
-            return Values[GetCurrentIndex()];
-        }
-
-        public string GetSelectedIndexName()
-        {
-            return Names[GetCurrentIndex()];
-        }
-
-        public int GetCurrentIndex()
-        {
-            return GetCurrentIndexCore();
-        }
-
-        protected int GetCurrentIndexCore()
-        {
-            if(currentIndex == null)
-            {
-                LoadValue();
-            }
-
-            return currentIndex.Value;
-        }
-
-        protected void SetDropdown(Dropdown dropdown)
-        {
-            dropdown.onValueChanged.AddListener((v) => SetValueFromDropdown(dropdown, v));
-            instancedDropdown = dropdown;
-            RefreshElementValue();
-        }
-
-        protected void SetValueFromDropdown(Dropdown source, int newValue)
-        {
-            if (source != instancedDropdown)
-                return;
-
-            SetIndex(newValue);
-        }
-
-        protected void RefreshValue()
-        {
-            SetValue(Values[GetCurrentIndex()]);
-        }
-
-        protected override void SetValueCore(T value)
-        {
-            if(!Values.Contains(value))
-            {
-                throw new KeyNotFoundException("Unable to set Dropdown's value directly. It is not contained within the values. Use SetValuesAndNames and SetIndex.");
-            }
-
-            base.SetValueCore(value);
-        }
-
-        public void SetIndex(int index)
-        {
-            if (index >= Values.Length || index < 0)
-                throw new IndexOutOfRangeException("Index is out of range of Dropdown's values.");
-
-            SetIndexCore(index);
-        }
-
-        protected void SetIndexCore(int index)
-        {
-            currentIndex = index;
-            RefreshValue();
-        }
-
-
-        protected override void BuildElementCore(ConfiggableAttribute configgable, RectTransform rect)
-        {
-            DynUI.ConfigUI.CreateElementSlot(rect, this, (r) =>
-            {
-                DynUI.Dropdown(r, SetDropdown);
-            },
-            null);
-        }
-
-        protected override void RefreshElementValueCore()
-        {
-            if (instancedDropdown == null)
-                return;
-
-            instancedDropdown.ClearOptions();
-            instancedDropdown.options = Names.Select(x => new Dropdown.OptionData(x)).ToList();
-            instancedDropdown.SetValueWithoutNotify(GetCurrentIndex());
-            instancedDropdown.RefreshShownValue();
+            if (origin != dropdown) return;
+            SetConfigValueWithoutNotify(newValue);
         }
     }
 }

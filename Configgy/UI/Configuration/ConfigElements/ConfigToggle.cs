@@ -1,4 +1,5 @@
-﻿using Configgy.UI;
+﻿using BepInEx.Configuration;
+using Configgy.UI;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -6,49 +7,22 @@ namespace Configgy
 {
     public class ConfigToggle : ConfigValueElement<bool>
     {
-        public ConfigToggle(bool defaultValue) : base(defaultValue) 
-        {
-            OnValueChanged += (_) => RefreshElementValue();
-        }
+        protected Toggle checkbox;
 
-        protected Toggle instancedToggle;
+        public ConfigToggle(ConfigEntry<bool> entry) : base(entry) { }
 
-        protected override void RefreshElementValueCore()
-        {
-            if (instancedToggle == null)
-                return;
-
-            instancedToggle.SetIsOnWithoutNotify(GetValue());
-        }
-
-        protected void SetToggle(Toggle toggle)
-        {
-            toggle.onValueChanged.AddListener((v) => SetValueFromToggle(toggle, v));
-            instancedToggle = toggle;
-            RefreshElementValue();
-        }
-
-        protected override void LoadValueCore()
-        {
-            base.LoadValueCore();
-            RefreshElementValue();
-        }
-
-        protected void SetValueFromToggle(Toggle source, bool newValue)
-        {
-            if (source != instancedToggle)
-                return;
-
-            SetValue(newValue);
-        }
-
-        protected override void BuildElementCore(ConfiggableAttribute descriptor, RectTransform rect)
-        {
-            DynUI.ConfigUI.CreateElementSlot(rect, this, (r) =>
+        protected override void BuildElement(RectTransform rect) {
+            DynUI.Toggle(rect, checkbox =>
             {
-                DynUI.Toggle(r, SetToggle);
-            },
-            null);
+                checkbox.isOn = config.Value;
+                checkbox.onValueChanged.AddListener(SetConfigValueWithoutNotify);
+                this.checkbox = checkbox;
+            });
+        }
+
+        protected override void OnConfigUpdate(bool value)
+        {
+            checkbox?.SetIsOnWithoutNotify(value);
         }
     }
 }

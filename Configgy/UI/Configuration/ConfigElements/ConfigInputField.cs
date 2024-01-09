@@ -1,4 +1,5 @@
-﻿using Configgy.UI;
+﻿using BepInEx.Configuration;
+using Configgy.UI;
 using System;
 using System.ComponentModel;
 using UnityEngine;
@@ -8,98 +9,92 @@ namespace Configgy
 {
     public class ConfigInputField<T> : ConfigValueElement<T>
     {
-        private Func<T, bool> inputValidator;
-        private Func<string, ValueTuple<bool, T>> valueConverter;
+        protected InputField textbox;
 
-        public ConfigInputField(T defaultValue, Func<T, bool> inputValidator = null, Func<string, ValueTuple<bool, T>> typeConverter = null)  : base (defaultValue)
+        public ConfigInputField(ConfigEntry<T> entry) : base(entry) { }
+
+        protected override void OnConfigUpdate(T value)
         {
-            this.valueConverter = typeConverter ?? ValidateInputSyntax;
-            this.inputValidator = inputValidator ?? ((v) => { return true; });
-
-            OnValueChanged += (_) => RefreshElementValue();
-            RefreshElementValue();
+            textbox.SetTextWithoutNotify(value.ToString());
         }
 
-        protected InputField instancedField;
-
-        private ValueTuple<bool, T> ValidateInputSyntax(string inputValue)
+        protected override void BuildElement(RectTransform rect)
         {
-            ValueTuple<bool, T> result = new ValueTuple<bool, T>();
-            
-            result.Item1 = false;
-            result.Item2 = default(T);
+            DynUI.InputField(rect, (textbox) =>
+            {
+                textbox.text = StringifyValue(config.Value);
+                textbox.onEndEdit.AddListener((s) => SetValueFromString(textbox, s));
+                this.textbox = textbox;
+            });
+        }
+
+        protected virtual bool ParseInput(string text, out T value)
+        {
+            // TODO: evaluate this vs. bepinex's toml-y converter system
+            System.ComponentModel.TypeConverter converter = TypeDescriptor.GetConverter(typeof(T));
+            object erasedValue = converter.ConvertFromString(text);
+            if (erasedValue == null)
+            {
+                value = default;
+                return false;
+            }
+            else
+            {
+                value = (T)erasedValue;
+                return true;
+            }
+        }
+
+        protected virtual bool ValidateValue(T value)
+        {
+            return true;
+        }
+
+        protected virtual string StringifyValue(T value)
+        {
+            return value.ToString();
+        }
+
+        private void SetValueFromString(InputField origin, string input)
+        {
+            if (origin != textbox) //prevent old non-null instance from calling this method.
+                return;
+
+            bool success = false;
+            T newValue;
 
             try
             {
-                TypeConverter typeConverter = TypeDescriptor.GetConverter(typeof(T));
-                object convertedValue = typeConverter.ConvertFromString(inputValue);
-                result.Item2 = (T) convertedValue;
-                result.Item1 = result.Item2 != null;
+                if (!ParseInput(input, out newValue))
+                {
+                    if (ValidateValue(newValue))
+                    {
+                        success = true;
+                    }
+                    else
+                    {
+                        Debug.LogError("Value validation failure. Rejected.");
+                    }
+                }
+                else
+                {
+                    Debug.LogError("Syntax for field invalid! Conversion failed!");
+                }
             }
             catch (Exception ex)
             {
                 Debug.LogException(ex);
+                newValue = default;
             }
 
-            return result;
-        }
-
-        private void SetValueFromString(InputField source, string input)
-        {
-            if (source != instancedField) //prevent old non-null instance from calling this method.
-                return;
-
-            ValueTuple<bool, T> conversionResult;
-            
-            try
+            if (success)
             {
-                conversionResult = valueConverter.Invoke(input);
-                if (!conversionResult.Item1)
-                {
-                    Debug.LogError("Syntax for field invalid! Conversion failed!");
-                    RefreshElementValue();
-                    return;
-                }
+                SetConfigValueWithoutNotify(newValue);
             }
-            catch (System.Exception ex)
+            else
             {
-                Debug.LogException(ex);
-                RefreshElementValue();
-                return;
+                textbox.SetTextWithoutNotify(StringifyValue(newValue));
             }
-
-            if(!inputValidator.Invoke(conversionResult.Item2))
-            {
-                Debug.LogError("Value validation failure. Rejected.");
-                RefreshElementValue();
-                return;
-            }
-
-            base.SetValue(conversionResult.Item2);
-        }
-
-        protected void SetInputField(InputField inputField)
-        {
-            inputField.onEndEdit.AddListener((s) => SetValueFromString(inputField, s));
-            instancedField = inputField;
-            RefreshElementValue();
-        }
-
-        protected override void RefreshElementValueCore()
-        {
-            if (instancedField == null)
-                return;
-
-            instancedField.SetTextWithoutNotify(GetValue().ToString());
-        }
-
-        protected override void BuildElementCore(ConfiggableAttribute configgable, RectTransform rect)
-        {
-            DynUI.ConfigUI.CreateElementSlot(rect, this, (r) =>
-            {
-                DynUI.InputField(r, SetInputField);
-            },
-            null);
         }
     }
 }

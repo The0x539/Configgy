@@ -1,4 +1,5 @@
-﻿using Configgy.Assets;
+﻿using BepInEx.Configuration;
+using Configgy.Assets;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,11 +16,8 @@ namespace Configgy.UI
 
         private bool menuBuilt = false;
 
-        [Configgable(displayName:"Open Config Menu")]
-        private static ConfigKeybind cfgKey = new ConfigKeybind(KeyCode.Backslash);
-
-        [Configgable(displayName: "Notify When Update Available")]
-        private static ConfigToggle notifyOnUpdateAvailable = new ConfigToggle(true);
+        internal static ConfigEntry<KeyCode> cfgKey;
+        internal static ConfigEntry<bool> notifyOnUpdateAvailable;
 
         private GameObject[] menus;
 
@@ -46,13 +44,11 @@ namespace Configgy.UI
             if (menuOpen)
             {
                 CheckMenuOpen();
-                return;
             }
-
-            if (!cfgKey.WasPeformed())
-                return;
-
-            OpenMenu();
+            else if (Input.GetKeyDown(cfgKey.Value))
+            {
+                OpenMenu();
+            }
         }
 
         private void CheckMenuOpen()
@@ -104,13 +100,13 @@ namespace Configgy.UI
 
             foreach(var menu in menus.OrderBy(x => x.OwnerDisplayName))
             {
-                BuildMenu(menu.GetConfigElements());
+                BuildMenu(menu.ConfigElements);
             }
         }
 
-        private void BuildMenu(IConfigElement[] configElements)
+        private void BuildMenu(IEnumerable<IConfigElement> configElements)
         {
-            foreach (IConfigElement configElement in configElements.OrderBy(x=>x.GetDescriptor().Path))
+            foreach (IConfigElement configElement in configElements.OrderBy(x => x.Definition.Section))
             {
                 BuildElement(configElement);
             }
@@ -123,17 +119,15 @@ namespace Configgy.UI
             menuBuilt = true;
         }
 
-        private void BuildMenuTreeFromPath(string fullPath)
+        private void BuildMenuTreeFromPath(IEnumerable<string> path)
         {
-            string[] path = fullPath.Split('/');
-
             string currentPathAddress = "";
 
             ConfigurationPage previousPage = null;
 
-            for (int i = 0; i < path.Length; i++)
+            foreach (string segment in path)
             {
-                currentPathAddress += path[i];
+                currentPathAddress += segment;
 
                 if (!pageManifest.ContainsKey(currentPathAddress))
                 {
@@ -150,12 +144,12 @@ namespace Configgy.UI
                         {
                             closablePage.Close();
                             page.Open();
-                        }, path[i]);
+                        }, segment);
 
                         closablePage.AddElement(openSubPageButton);
 
                         //Configure page
-                        page.SetHeader(path[i]);
+                        page.SetHeader(segment);
                         page.SetParent(closablePage);
                         page.gameObject.name = currentPathAddress;
                         page.SetFooter(currentPathAddress);
@@ -168,30 +162,22 @@ namespace Configgy.UI
                 {
                     previousPage = pageManifest[currentPathAddress];
                 }
-                
+
                 currentPathAddress += "/";
             }
         }
-        
+
         private void BuildElement(IConfigElement element)
         {
-            ConfiggableAttribute descriptor = element.GetDescriptor();
-            
-            string path = "";
-
-            if (descriptor != null && descriptor.Owner != null)
-            {
-                path = $"{descriptor.Owner.OwnerDisplayName}";
-                if(!string.IsNullOrEmpty(descriptor.Path))
-                    path += $"/{descriptor.Path}";
-            }else
-            {
-                path = "/Other";
-            }
+            var path = new List<string>();
+            path.Add(element.Parent.OwnerDisplayName);
+            //path.AddRange(element.Definition.Section.Split('.'));
+            //path.Add(element.Definition.Key);
 
             BuildMenuTreeFromPath(path);
 
-            pageManifest[path].AddElement(element);
+            var pathString = string.Join("/", path);
+            pageManifest[pathString].AddElement(element);
         }
 
         private void NewPage(Action<ConfigurationPage> onInstance)
@@ -214,7 +200,7 @@ namespace Configgy.UI
                 lastOpenPage.Open();
             else
                 rootPage.Open();
-            
+
             menuOpen = true;
 
             if (!openedOnce)
@@ -254,7 +240,7 @@ namespace Configgy.UI
                                 Color = Color.red,
                                 OnClick = () =>
                                 {
-                                    notifyOnUpdateAvailable.SetValue(false);
+                                    notifyOnUpdateAvailable.Value = false;
                                 }
                             }
                         }

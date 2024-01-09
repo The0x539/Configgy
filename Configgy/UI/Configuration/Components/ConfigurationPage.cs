@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Configgy.UI
@@ -15,7 +14,7 @@ namespace Configgy.UI
         [SerializeField] private Button backButton;
         [SerializeField] private Button closeButton;
         [SerializeField] private RectTransform contentBody;
-        
+
         private List<IConfigElement> elements = new List<IConfigElement>();
 
         public bool preventClosing = false;
@@ -59,8 +58,8 @@ namespace Configgy.UI
         }
 
         public void SetParent(ConfigurationPage page)
-        { 
-            Parent = page; 
+        {
+            Parent = page;
         }
 
         public void SetHeader(string headerText)
@@ -68,7 +67,7 @@ namespace Configgy.UI
             this.header.text = $"-- {headerText} --";
         }
 
-        public void SetFooter(string footerText) 
+        public void SetFooter(string footerText)
         {
             this.footer.text = footerText.TrimEnd('/', '\n', '\r');
         }
@@ -118,7 +117,7 @@ namespace Configgy.UI
         {
             DestroyAllElements();
 
-            foreach(IConfigElement configElement in elements.OrderBy(x=>x.GetDescriptor()?.OrderInList))
+            foreach(IConfigElement configElement in elements.OrderBy(x=>x.Metadata.SortOrder))
             {
                 configElement.BuildElement(contentBody);
             }
@@ -127,18 +126,10 @@ namespace Configgy.UI
         private void OnEnable()
         {
             backButton.gameObject.SetActive(Parent != null);
-            foreach (IConfigElement configElement in elements.OrderBy(x => x.GetDescriptor()?.OrderInList))
-            {
-                configElement.OnMenuOpen();
-            }
         }
 
         private void OnDisable()
         {
-            foreach (IConfigElement configElement in elements.OrderBy(x => x.GetDescriptor()?.OrderInList))
-            {
-                configElement.OnMenuClose();
-            }
         }
     }
 }

@@ -103,12 +103,13 @@ namespace Configgy.UI
         {
             public static void CreateElementSlot<T>(RectTransform rect, ConfigValueElement<T> valueElement, Action<RectTransform> onInstance, Action<RectTransform> onButtonSlots = null)
             {
-                ConfiggableAttribute configgable = valueElement.GetDescriptor();
-
                 DynUI.Frame(rect, (f) =>
                 {
 
                     f.RectTransform.sizeDelta = new Vector2(f.RectTransform.sizeDelta.x, 55f);
+
+                    string shortDescription = valueElement.Metadata.ShortDescription;
+                    string longDescription = valueElement.Description.Description;
 
                     DynUI.Div(f.Content, (operatorsDiv) =>
                     {
@@ -133,14 +134,15 @@ namespace Configgy.UI
                             button.onClick.AddListener(valueElement.ResetValue);
                         });
 
-                        if (!string.IsNullOrEmpty(configgable.Description))
+                        // only present a description dropdown if both short and long "descriptions" are provided
+                        if (!string.IsNullOrEmpty(shortDescription) && !string.IsNullOrEmpty(longDescription))
                         {
                             GameObject newDescriptionBox = null;
 
                             DynUI.Description(rect, (r, desc) =>
                             {
                                 newDescriptionBox = r.gameObject;
-                                desc.text = configgable.Description;
+                                desc.text = longDescription;
                                 r.gameObject.SetActive(false);
                             });
 
@@ -172,6 +174,11 @@ namespace Configgy.UI
                         onButtonSlots?.Invoke(operatorsDiv);
                     });
 
+                    // if there is no separate "short" description, use the "long" description as the label
+                    if (string.IsNullOrEmpty(shortDescription))
+                    {
+                        shortDescription = longDescription;
+                    }
 
                     DynUI.Div(f.Content, (elementsDiv) =>
                     {
@@ -191,7 +198,7 @@ namespace Configgy.UI
 
                         DynUI.Label(elementsDiv, (t) =>
                         {
-                            t.text = configgable.DisplayName;
+                            t.text = shortDescription;
                             t.fontSize = 4;
                             t.resizeTextMaxSize = 25;
                         });
@@ -246,7 +253,7 @@ namespace Configgy.UI
             {
                 rt.anchoredPosition = new Vector2(-(padding*2f),-(padding*2f));
             }
-            
+
         }
 
     }

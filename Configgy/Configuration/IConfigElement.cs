@@ -1,15 +1,13 @@
-﻿using UnityEngine;
+﻿using BepInEx.Configuration;
+using UnityEngine;
 
 namespace Configgy
 {
     public interface IConfigElement
     {
-        public void BindDescriptor (ConfiggableAttribute configgable);
-        public ConfiggableAttribute GetDescriptor();
-        public void BuildElement(RectTransform rect);
-
-        public void OnMenuOpen();
-        public void OnMenuClose();
-        public void BindConfig(ConfigBuilder configBuilder);
+        ConfigBuilder Parent { get; set; }
+        ConfigDefinition Definition { get; }
+        ConfigElementMetadata Metadata { get; }
+        void BuildElement(RectTransform rect);
     }
 }

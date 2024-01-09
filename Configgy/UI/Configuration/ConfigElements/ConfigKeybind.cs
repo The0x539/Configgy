@@ -1,5 +1,5 @@
-﻿using Configgy.UI;
-using System;
+﻿using BepInEx.Configuration;
+using Configgy.UI;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
@@ -8,48 +8,34 @@ namespace Configgy
 {
     public class ConfigKeybind : ConfigValueElement<KeyCode>
     {
-        public ConfigKeybind(KeyCode keyCode) : base(keyCode)
-        {
-            OnValueChanged += (_) => RefreshElementValue();
-        }
-
         private Text keybindText;
         private Button keybindButton;
         private ConfigurationPage page;
         public bool IsBeingRebound { get; private set; }
 
-        protected override void BuildElementCore(ConfiggableAttribute descriptor, RectTransform rect)
-        {
-            IsBeingRebound = false;
-            page = rect.GetComponentInParent<ConfigurationPage>();
+        public ConfigKeybind(ConfigEntry<KeyCode> entry) : base(entry) { }
 
-            DynUI.ConfigUI.CreateElementSlot(rect, this, (r) =>
-            {
-                DynUI.Button(r, (b) =>
-                {
-                    SetKeybindButton(b);
-                });
-            });
+        protected override void OnConfigUpdate(KeyCode value)
+        {
+            keybindText.text = value.ToString();
         }
 
-        public event Action OnRebindStart;
-        public event Action OnRebindEnd;
-
-        private void SetKeybindButton(Button button)
-        {
-            keybindButton = button;
-            keybindText = button.GetComponentInChildren<Text>();
-            keybindButton.onClick.AddListener(StartRebinding);
+        protected override void BuildElement(RectTransform rect) {
+            IsBeingRebound = false;
+            page = rect.GetComponentInParent<ConfigurationPage>();
+            DynUI.Button(rect, (button) =>
+            {
+                button.onClick.AddListener(StartRebinding);
+                keybindText = button.GetComponentInChildren<Text>();
+                keybindText.text = config.Value.ToString();
+                keybindButton = button;
+            });
         }
 
         private void StartRebinding()
         {
-            if(page == null)
-            {
-                page = keybindButton.GetComponentInParent<ConfigurationPage>();
-            }
-
-            if(page == null)
+            page ??= keybindButton.GetComponentInParent<ConfigurationPage>();
+            if (page == null)
             {
                 Debug.LogError("Page could not be found?");
                 return;
@@ -62,86 +48,48 @@ namespace Configgy
 
             page.preventClosing = true;
             page.StartCoroutine(RebindProcess());
-            OnRebindStart?.Invoke();
-        }
-
-        public bool IsPressed()
-        {
-            if (IsBeingRebound)
-                return false;
-
-            if (Value == KeyCode.None)
-                return false;
-
-            return Input.GetKey(Value);
-        }
-
-        public bool WasPeformed()
-        {
-            if (IsBeingRebound)
-                return false;
-
-            if (Value == KeyCode.None)
-                return false;
-
-            return Input.GetKeyDown(Value);
-        }
-
-        public bool WasReleased()
-        {
-            if (IsBeingRebound)
-                return false;
-
-            if (Value == KeyCode.None)
-                return false;
-
-            return Input.GetKeyUp(Value);
-        }
-
-        protected override void RefreshElementValueCore()
-        {
-            keybindText.text = GetValue().ToString();
         }
 
         private void FinishRebind(KeyCode keycode)
         {
             keybindButton.interactable = true;
             page.preventClosing = false;
-
             IsBeingRebound = false;
-
-            SetValue(keycode);
-            OnRebindEnd?.Invoke();
+            config.Value = keycode;
         }
 
         private IEnumerator RebindProcess()
         {
             float timer = 10f;
             IsBeingRebound = true;
-            KeyCode currentKeyCode = Value;
+            KeyCode currentKeyCode = config.Value;
             int counter = 0;
             yield return new WaitForSecondsRealtime(0.18f);
+
             while (IsBeingRebound && timer > 0f)
             {
                 yield return null;
                 timer -= Time.deltaTime;
                 Event current = Event.current;
-                if (current.type == EventType.KeyDown || current.type == EventType.KeyUp)
-                {
-                    switch (current.keyCode)
-                    {
-                        case KeyCode.Escape:
-                            FinishRebind(KeyCode.None);
-                            yield break;
-                        default:
-                            FinishRebind(current.keyCode);
-                            yield break;
-                        case KeyCode.None:
-                            break;
-                    }
 
-                    counter++;
+                if (current.type is not (EventType.KeyDown or EventType.KeyUp))
+                {
+                    continue;
                 }
+
+                switch (current.keyCode)
+                {
+                    case KeyCode.Escape:
+                        FinishRebind(KeyCode.None);
+                        yield break;
+                    default:
+                        FinishRebind(current.keyCode);
+                        yield break;
+                    case KeyCode.None:
+                        break;
+                }
+
+                counter++;
             }
 
             FinishRebind(currentKeyCode);

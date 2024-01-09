@@ -1,44 +1,29 @@
-﻿using UnityEngine;
+﻿using BepInEx.Configuration;
 using UnityEngine.UI;
 
 namespace Configgy
 {
     public class FloatSlider : ConfigSlider<float>
     {
-        public FloatSlider(float defaultValue, float min, float max) : base(defaultValue, min, max) {}
+        public FloatSlider(ConfigEntry<float> config, float min, float max) : base(config, min, max) { }
 
-        protected override void BuildElementCore(ConfiggableAttribute configgable, RectTransform rect)
+        protected override void OnConfigUpdate(float value)
         {
-            base.BuildElementCore(configgable, rect);
-            instancedSlider.wholeNumbers = false;
-            OnValueChanged += (v) => RefreshElementValue();
-            RefreshElementValue();
-        }
-
-        protected override void ConfigureSliderRange(Slider slider)
-        {
-            slider.minValue = Min;
-            slider.maxValue = Max;
-        }
-
-        protected override void LoadValueCore()
-        {
-            base.LoadValueCore();
-            RefreshElementValue();
+            slider.value = value;
+            base.OnConfigUpdate(value);
         }
 
         protected override void SetValueFromSlider(float value)
         {
-            SetValue(value);
+            SetConfigValueWithoutNotify(value);
         }
 
-        protected override void RefreshElementValueCore()
+        protected override void InitializeSlider(Slider slider)
         {
-            base.RefreshElementValueCore();
-            if (instancedSlider == null)
-                return;
-
-            instancedSlider.SetValueWithoutNotify(GetValue());
+            slider.minValue = min;
+            slider.maxValue = max;
+            slider.value = config.Value;
+            slider.wholeNumbers = false;
         }
     }
 }

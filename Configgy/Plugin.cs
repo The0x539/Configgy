@@ -11,12 +11,8 @@ namespace Configgy
     {
         private Harmony harmony;
 
-        private ConfigBuilder configgyConfig;
-
         public static bool UsingLatest = true;
         public static string LatestVersion { get; private set; } = ConstInfo.VERSION;
-
-    
 
         private void Awake()
         {
@@ -24,8 +20,9 @@ namespace Configgy
             harmony = new Harmony(ConstInfo.GUID+".harmony");
             harmony.PatchAll();
 
-            configgyConfig = new ConfigBuilder(ConstInfo.GUID, "Configgy");
-            configgyConfig.Build();
+            UI.ConfigurationMenu.cfgKey ??= Config.Bind("Meta", "MenuKeybind", KeyCode.Backslash, "Open Config Menu");
+            UI.ConfigurationMenu.notifyOnUpdateAvailable ??= Config.Bind("Meta", "CheckForUpdates", true, "Notify When Update Available");
+            new ConfigBuilder("Configgy", ConstInfo.GUID).AddFile(Config).Build();
 
             VersionCheck.CheckVersion(ConstInfo.GITHUB_VERSION_URL, ConstInfo.VERSION, (r, latest) =>
             {

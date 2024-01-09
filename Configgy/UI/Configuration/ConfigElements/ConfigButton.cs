@@ -1,4 +1,5 @@
-﻿using Configgy.UI;
+﻿using BepInEx.Configuration;
+using Configgy.UI;
 using System;
 using UnityEngine;
 using UnityEngine.UI;
@@ -10,31 +11,22 @@ namespace Configgy
         public Action OnPress;
         private string label;
 
-        public ConfigButton(Action onPress, string label = null)
+        public ConfigButton(Action onPress, string label = null, ConfigElementMetadata metadata = null)
         {
             this.OnPress = onPress;
             this.label = label;
+            Metadata = metadata ?? new();
         }
 
-        private ConfiggableAttribute descriptor;
+        public ConfigBuilder Parent { get; set; }
 
-        public void BindDescriptor(ConfiggableAttribute descriptor)
-        {
-            this.descriptor = descriptor;
-        }
-
-        public ConfiggableAttribute GetDescriptor()
-        {
-            return descriptor;
-        }
+        public ConfigDefinition Definition { get; } = new("", ""); // dummy value
+        public ConfigElementMetadata Metadata { get; }
 
         private string GetLabel()
         {
             if (!string.IsNullOrEmpty(label))
                 return label;
-
-            if (descriptor != null)
-                return descriptor.DisplayName;
 
             return OnPress.Method.Name;
         }
@@ -54,9 +46,5 @@ namespace Configgy
                 });
             });
         }
-
-        public void OnMenuOpen() { }
-        public void OnMenuClose() { }
-        public void BindConfig(ConfigBuilder configBuilder) { }
     }
 }
