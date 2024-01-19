@@ -1,6 +1,7 @@
 ﻿using Configgy.Assets;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEngine;
 
@@ -26,6 +27,7 @@ namespace Configgy.UI
         ConfigurationPage lastOpenPage;
 
         private static event Action onGlobalOpen;
+        private static event Action<string> onGlobalOpenAtPath;
         private static event Action onGlobalClose;
         private bool menuOpen = false;
 
@@ -38,6 +40,7 @@ namespace Configgy.UI
 
             onGlobalOpen += OpenMenu;
             onGlobalClose += CloseMenu;
+            onGlobalOpenAtPath += OpenMenuAtPath;
             ConfigurationManager.OnMenusChanged += BuildMenus;
         }
 
@@ -228,6 +231,43 @@ namespace Configgy.UI
 
         }
 
+        public void OpenMenuAtPath(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+            {
+                OpenMenu();
+                return;
+            }
+
+            menus = transform.GetChildren().Select(x => x.gameObject).ToArray();
+            Pauser.Pause(menus);
+
+            string copyPath = path;
+            //ensure path exists, if not go up a directory until it does.
+            while (!pageManifest.ContainsKey(copyPath) && !string.IsNullOrEmpty(copyPath) && copyPath != "/")
+            {
+                copyPath = Path.GetDirectoryName(copyPath);
+            }
+
+            if (string.IsNullOrEmpty(copyPath) || !pageManifest.ContainsKey(copyPath))
+            {
+                OpenMenu();
+                return;
+            }
+
+            pageManifest[copyPath].Open();
+            menuOpen = true;
+
+            if (!openedOnce)
+            {
+                openedOnce = true;
+                if (!Plugin.UsingLatest && notifyOnUpdateAvailable.Value)
+                {
+                    ShowUpdatePrompt();
+                }
+            }
+        }
+
         private void ShowUpdatePrompt()
         {
             ModalDialogue.ShowDialogue(new ModalDialogueEvent()
@@ -279,6 +319,11 @@ namespace Configgy.UI
             onGlobalOpen?.Invoke();
         }
 
+        public static void OpenAtPath(string path)
+        {
+            onGlobalOpenAtPath?.Invoke(path);
+        }
+
         public static void Close()
         {
             onGlobalClose?.Invoke();
@@ -295,7 +340,7 @@ namespace Configgy.UI
             ConfigurationManager.OnMenusChanged -= BuildMenus;
             onGlobalOpen -= OpenMenu;
             onGlobalClose -= CloseMenu;
-
+            onGlobalOpenAtPath -= OpenMenuAtPath;
         }
     }
 }

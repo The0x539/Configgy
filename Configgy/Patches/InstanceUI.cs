@@ -19,8 +19,10 @@ namespace Configgy.Patches
         {
             CanvasRect = __instance.GetComponent<RectTransform>();
             GameObject.Instantiate(PluginAssets.ConfigurationMenu, CanvasRect);
-            InstanceOpenConfigButton(CanvasRect);
+            InstanceOpenConfigButtonPauseMenu(CanvasRect);
+            InstanceOpenConfigButtonMainMenu(CanvasRect);
             InstanceModalDialogueManager(CanvasRect);
+
         }
 
         private static void InstanceModalDialogueManager(RectTransform rect)
@@ -28,7 +30,7 @@ namespace Configgy.Patches
             GameObject modalDialogueManagerObject = GameObject.Instantiate(PluginAssets.ModalDialogueManager, rect);
         }
 
-        private static void InstanceOpenConfigButton(RectTransform rect)
+        private static void InstanceOpenConfigButtonPauseMenu(RectTransform rect)
         {
             Transform pausemenu = rect.GetChildren().Where(x => x.name == "PauseMenu").FirstOrDefault();
             RectTransform pauseMenuRect = pausemenu.GetComponent<RectTransform>();
@@ -53,6 +55,33 @@ namespace Configgy.Patches
                     pauseMenuRect.gameObject.SetActive(false);
                     OptionsManager.Instance.UnPause();
                 });
+                b.onClick.AddListener(ConfigurationMenu.Open);
+            });
+        }
+
+        private static void InstanceOpenConfigButtonMainMenu(RectTransform rect)
+        {
+            //Only on main menu.
+            if (SceneHelper.CurrentScene != "Main Menu")
+                return;
+
+            Transform mainMenu = rect.GetChildren().Where(x => x.name == "Main Menu (1)").FirstOrDefault();
+            RectTransform mainMenuRect = mainMenu.GetComponent<RectTransform>();
+
+            RectTransform panel = mainMenu.GetChildren().Where(x => x.name == "Panel").FirstOrDefault().GetComponent<RectTransform>();
+            float buttonHeight = panel.sizeDelta.y;
+            Vector2 panelPos = panel.anchoredPosition;
+
+            DynUI.ImageButton(mainMenuRect, (b, i) =>
+            {
+                i.sprite = PluginAssets.Icon_Configgy;
+
+                RectTransform buttonRect = b.GetComponent<RectTransform>();
+                buttonRect.SetAnchors(0.5f, 0.5f, 0.5f, 0.5f);
+                buttonRect.sizeDelta = new Vector2(buttonHeight, buttonHeight);
+
+                panelPos.x += (panel.sizeDelta.x / 2f) + (buttonHeight / 2f) + 2f;
+                buttonRect.anchoredPosition = panelPos;
                 b.onClick.AddListener(ConfigurationMenu.Open);
             });
         }

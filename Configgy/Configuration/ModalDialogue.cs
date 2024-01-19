@@ -50,7 +50,18 @@ namespace Configgy
 
         public static void ShowComplex(string title, string message, params DialogueBoxOption[] options)
         {
+            if (ModalDialogueManager.Instance == null)
+            {
+                Debug.LogError("No ModalDialogueManager found in scene.");
+                return;
+            }
 
+            ModalDialogueManager.Instance.RaiseDialogue(new ModalDialogueEvent()
+            {
+                Title = title,
+                Message = message,
+                Options = options
+            });
         }
     }
 }
