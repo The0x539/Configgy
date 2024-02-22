@@ -21,6 +21,10 @@ namespace Configgy
         private static BehaviourRelay watcher;
         
 
+        /// <summary>
+        /// Pauses the game.
+        /// </summary>
+        /// <param name="origin">Pause state will stop if this object is disabled.</param>
         public static void Pause(GameObject origin)
         {
             pauserObjects = pauserObjects.Where(x => x != null && x.activeInHierarchy).Distinct().ToList();
@@ -32,6 +36,10 @@ namespace Configgy
             SetPaused(true);
         }
 
+        /// <summary>
+        /// Pauses the game with a list of objects that are observed for their active state.
+        /// </summary>
+        /// <param name="origins">List of objects that will maintain the pause state while all are active.</param>
         public static void Pause(params GameObject[] origins)
         {
             pauserObjects = pauserObjects.Where(x => x != null && x.activeInHierarchy).Distinct().ToList();
@@ -111,7 +119,10 @@ namespace Configgy
         }
 
         
-
+        /// <summary>
+        /// Unpauses the game using the object that paused it.
+        /// </summary>
+        /// <param name="origin">Object that paused the game or null if you did not use one.</param>
         public static void Unpause(GameObject origin = null)
         {
             if(origin != null)

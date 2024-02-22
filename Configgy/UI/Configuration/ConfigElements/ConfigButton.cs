@@ -10,6 +10,9 @@ namespace Configgy
         public Action OnPress;
         private string label;
 
+        private Button buttonInstance;
+        private Text buttonText;
+
         public ConfigButton(Action onPress, string label = null)
         {
             this.OnPress = onPress;
@@ -39,6 +42,25 @@ namespace Configgy
             return OnPress.Method.Name;
         }
 
+        public void SetLabel(string label)
+        {
+            this.label = label;
+            
+            if (buttonText)
+                buttonText.text = label;
+        }
+
+        public void SetAction(Action onPress)
+        {
+            this.OnPress = onPress;
+
+            if (buttonInstance)
+            {
+                buttonInstance.onClick.RemoveAllListeners();
+                buttonInstance.onClick.AddListener(OnPress.Invoke);
+            }
+        }
+
         public void BuildElement(RectTransform rect)
         {
             DynUI.Frame(rect, (panel) =>
@@ -47,7 +69,10 @@ namespace Configgy
 
                 DynUI.Button(panel.RectTransform, (b) =>
                 {
-                    b.GetComponentInChildren<Text>().text = GetLabel();
+                    buttonInstance = b;
+                    buttonText = b.GetComponentInChildren<Text>();
+                    buttonText.text = GetLabel();
+
                     RectTransform buttonTf = b.GetComponent<RectTransform>();
                     DynUI.Layout.FillParent(buttonTf);
                     b.onClick.AddListener(() => { OnPress?.Invoke(); });
@@ -55,8 +80,8 @@ namespace Configgy
             });
         }
 
-        public void OnMenuOpen() { }
-        public void OnMenuClose() { }
+        public virtual void OnMenuOpen() { }
+        public virtual void OnMenuClose() { }
         public void BindConfig(ConfigBuilder configBuilder) { }
     }
 }

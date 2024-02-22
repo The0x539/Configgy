@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BepInEx.Configuration;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -8,6 +9,9 @@ using UnityEngine;
 
 namespace Configgy
 {
+    /// <summary>
+    /// A class that allows you to build a configuration menu from your assembly.
+    /// </summary>
     public class ConfigBuilder
     {
         public string GUID { get; }
@@ -29,6 +33,11 @@ namespace Configgy
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="guid">Your mod GUID ex:"JohnModder.ULTRAKILL.MyMod"</param>
+        /// <param name="menuDisplayName">The display name for your config in the configuration menu.</param>
         public ConfigBuilder(string guid = null, string menuDisplayName = null) 
         {
             this.owner = Assembly.GetCallingAssembly();
@@ -36,6 +45,9 @@ namespace Configgy
             this.OwnerDisplayName = (string.IsNullOrEmpty(menuDisplayName) ? GUID : menuDisplayName);
         }
 
+        /// <summary>
+        /// Builds your configuration menu and registers it with Configgy
+        /// </summary>
         public void Build()
         {
             if (Initialized)
@@ -57,10 +69,11 @@ namespace Configgy
                     ProcessField(field);
                 }
 
-                foreach (PropertyInfo property in type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
-                {
-                    //ProcessProperty(property);
-                }
+                //properties are not supported yet.
+                //foreach (PropertyInfo property in type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
+                //{
+                //    //ProcessProperty(property);
+                //}
             }
 
             foreach (var element in _configElements)
@@ -75,6 +88,20 @@ namespace Configgy
 
             Initialized = true;
             ConfigurationManager.RegisterConfiguraitonMenu(this);
+        }
+
+        /// <summary>
+        /// Forcefully rebuilds the configuration menu. Do not use this in a hot path.
+        /// </summary>
+        public void Rebuild()
+        {
+            if (!Initialized)
+            {
+                Build();
+                return;
+            }
+
+            OnConfigElementsChanged?.Invoke(_configElements.ToArray());
         }
 
         public event Action<IConfigElement[]> OnConfigElementsChanged;
@@ -183,6 +210,7 @@ namespace Configgy
         private void RegisterElementCore(ConfiggableAttribute descriptor, IConfigElement configElement)
         {
             configElement.BindDescriptor(descriptor);
+            configElement.BindConfig(this);
             _configElements.Add(configElement);
         }
 
