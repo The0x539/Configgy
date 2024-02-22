@@ -100,6 +100,9 @@ namespace Configgy
 
         protected override void RefreshElementValueCore()
         {
+            if (keybindText == null)
+                return;
+
             keybindText.text = GetValue().ToString();
         }
 
