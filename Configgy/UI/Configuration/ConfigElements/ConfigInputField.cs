@@ -8,13 +8,15 @@ namespace Configgy
 {
     public class ConfigInputField<T> : ConfigValueElement<T>
     {
-        private Func<T, bool> inputValidator;
-        private Func<string, ValueTuple<bool, T>> valueConverter;
+        protected Func<T, bool> inputValidator;
+        protected Func<string, ValueTuple<bool, T>> valueConverter;
+        public Func<T, string> toStringOverride;
 
         public ConfigInputField(T defaultValue, Func<T, bool> inputValidator = null, Func<string, ValueTuple<bool, T>> typeConverter = null)  : base (defaultValue)
         {
             this.valueConverter = typeConverter ?? ValidateInputSyntax;
             this.inputValidator = inputValidator ?? ((v) => { return true; });
+            this.toStringOverride = null;
 
             OnValueChanged += (_) => RefreshElementValue();
             RefreshElementValue();
@@ -90,7 +92,15 @@ namespace Configgy
             if (instancedField == null)
                 return;
 
-            instancedField.SetTextWithoutNotify(GetValue().ToString());
+            T value = GetValue();
+
+            string valueString = null;
+            if (toStringOverride != null)
+                valueString = toStringOverride.Invoke(value);
+            else
+                valueString = value.ToString();
+
+            instancedField.SetTextWithoutNotify(valueString);
         }
 
         protected override void BuildElementCore(ConfiggableAttribute configgable, RectTransform rect)

@@ -16,8 +16,6 @@ namespace Configgy
         public static bool UsingLatest = true;
         public static string LatestVersion { get; private set; } = ConstInfo.VERSION;
 
-    
-
         private void Awake()
         {
             PluginAssets.Initialize();
@@ -25,7 +23,7 @@ namespace Configgy
             harmony.PatchAll();
 
             configgyConfig = new ConfigBuilder(ConstInfo.GUID, "Configgy");
-            configgyConfig.Build();
+            configgyConfig.BuildAll();
 
             VersionCheck.CheckVersion(ConstInfo.GITHUB_VERSION_URL, ConstInfo.VERSION, (r, latest) =>
             {

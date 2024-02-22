@@ -1,5 +1,4 @@
-﻿using BepInEx.Configuration;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -14,24 +13,20 @@ namespace Configgy
     /// </summary>
     public class ConfigBuilder
     {
+        /// <summary>
+        /// The GUID of the config. This is used to identify the config in the configuration menu and serialize it's data.
+        /// </summary>
         public string GUID { get; }
-        public string OwnerDisplayName { get; }
-        public bool Initialized { get; private set; }
 
-        private Assembly owner;
+        /// <summary>
+        /// The display name of the config in the root of the configuration menu.
+        /// </summary>
+        public string DisplayName { get; }
 
-        private List<IConfigElement> _configElements;
-        private IConfigElement[] configElements
-        {
-            get
-            {
-                if (_configElements == null)
-                {
-                    Build();
-                }
-                return _configElements.ToArray();
-            }
-        }
+        internal bool initialized { get; private set; }
+
+        internal Assembly owner;
+        internal List<IConfigElement> _configElements;
 
         /// <summary>
         /// 
@@ -42,51 +37,107 @@ namespace Configgy
         {
             this.owner = Assembly.GetCallingAssembly();
             this.GUID = (string.IsNullOrEmpty(guid) ? owner.GetName().Name : guid);
-            this.OwnerDisplayName = (string.IsNullOrEmpty(menuDisplayName) ? GUID : menuDisplayName);
+            this.DisplayName = (string.IsNullOrEmpty(menuDisplayName) ? GUID : menuDisplayName);
+        }
+
+        internal static HashSet<Type> environmentBuiltTypes = new HashSet<Type>();
+
+        /// <summary>
+        /// Builds provided all config elements within the provided types.
+        /// </summary>
+        /// <param name="types"></param>
+        public void BuildTypes(params Type[] types)
+        {
+            foreach (var type in types)
+            {
+                BuildType(type);
+            }
         }
 
         /// <summary>
-        /// Builds your configuration menu and registers it with Configgy
+        /// Builds all config elements defined in a specific type.
         /// </summary>
-        public void Build()
+        /// <param name="type"></param>
+        public void BuildType(Type type)
         {
-            if (Initialized)
+            owner ??= Assembly.GetCallingAssembly();
+
+            if (owner != type.Assembly)
+                throw new Exception($"Configgy.ConfigBuilder:{GUID}: You can only build types originating from the assembly that owns the ConfigBuilder.");
+
+            if (environmentBuiltTypes.Contains(type))
+            {
+                if (builtGlobal)
+                    throw new Exception($"Configgy.ConfigBuilder:{GUID}: Type has already been built into an existing config. If this is a mistake and you called BuildAll, you must call BuildType before BuildAll.");
+                else
+                    throw new Exception($"Configgy.ConfigBuilder:{GUID}: Type has already been built into an existing config.");
+            }
+
+            _configElements ??= new List<IConfigElement>();
+            ProcessType(type);
+            BuildInternal();
+        }
+
+        private bool builtGlobal = false;
+
+        /// <summary>
+        /// Builds config elements from any un-built types' configgable fields and methods in your assembly.
+        /// </summary>
+        public void BuildAll()
+        {
+            //only build global once.
+            if (builtGlobal)
                 return;
 
-            _configElements = new List<IConfigElement>();
-            currentAssembly = owner;
-            
+            owner ??= Assembly.GetCallingAssembly();
+            _configElements ??= new List<IConfigElement>();
+
             foreach (Type type in owner.GetTypes())
-            {
-                currentType = type;
-                foreach (MethodInfo method in type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
-                {
-                    ProcessMethod(method);
-                }
+                ProcessType(type);
 
-                foreach (FieldInfo field in type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
-                {
-                    ProcessField(field);
-                }
+            builtGlobal = true;
+            BuildInternal();
+        }
 
-                //properties are not supported yet.
-                //foreach (PropertyInfo property in type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
-                //{
-                //    //ProcessProperty(property);
-                //}
-            }
+        /// <summary>
+        /// Builds your configuration menu and registers it with Configgy.
+        /// </summary>
+        [Obsolete($"Build is now obsolete. Use {nameof(ConfigBuilder)}.{nameof(BuildAll)} to build using your whole assembly.")]
+        public void Build()
+        {
+            if (initialized)
+                return;
 
-            foreach (var element in _configElements)
-            {
-                element.BindConfig(this);
-            }
+            BuildAll();
+        }
 
+        internal void ProcessType(Type type)
+        {
+            //Possibly built by manual call. Ignore it.
+            if (environmentBuiltTypes.Contains(type))
+                return;
+
+            foreach (MethodInfo method in type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance))
+                ProcessMethod(method);
+
+            foreach (FieldInfo field in type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance))
+                ProcessField(field);
+
+            environmentBuiltTypes.Add(type);
+        }
+
+        internal void BuildInternal()
+        {
+            if (initialized)
+                return;
+
+            _configElements ??= new List<IConfigElement>();
             CreateSaverObject();
 
             OnConfigElementsChanged += (v) => ConfigurationManager.SubMenuElementsChanged();
             OnConfigElementsChanged?.Invoke(_configElements.ToArray());
 
-            Initialized = true;
+            initialized = true;
             ConfigurationManager.RegisterConfiguraitonMenu(this);
         }
 
@@ -95,40 +146,44 @@ namespace Configgy
         /// </summary>
         public void Rebuild()
         {
-            if (!Initialized)
-            {
-                Build();
-                return;
-            }
-
+            BuildInternal();
             OnConfigElementsChanged?.Invoke(_configElements.ToArray());
         }
 
+        /// <summary>
+        /// Invoked when the menu is rebuilt.
+        /// </summary>
         public event Action<IConfigElement[]> OnConfigElementsChanged;
 
-        public IConfigElement[] GetConfigElements()
+        internal IConfigElement[] GetConfigElements()
         {
-            return configElements;
+            return _configElements.ToArray();
         }
-
-        private Assembly currentAssembly;
-        private Type currentType;
 
         private void ProcessMethod(MethodInfo method)
         {
-            if (!method.IsStatic) //no instance!!
-                return;
-
-            if (method.ReturnType != typeof(void))
-                return;
-
-            if (method.GetParameters().Length > 0)
-                return;
-
             ConfiggableAttribute cfg = method.GetCustomAttribute<ConfiggableAttribute>();
 
             if (cfg == null)
                 return;
+
+            if (method.ReturnType != typeof(void))
+            {
+                Debug.LogError($"Configgy.ConfigBuilder:{GUID}: attempted to register method {method.DeclaringType.Name}.{method.Name}. But it's return type is not void. Skipping!");
+                return;
+            }
+
+            if (method.GetParameters().Length > 0)
+            {
+                Debug.LogError($"Configgy.ConfigBuilder:{GUID}: attempted to register method {method.DeclaringType.Name}.{method.Name}. But it has more than 0 parameters. Skipping!");
+                return;
+            }
+
+            if (!method.IsStatic) //no instance!!
+            {
+                Debug.LogError($"Configgy.ConfigBuilder:{GUID}: attempted to register method {method.DeclaringType.Name}.{method.Name}. But it is not static. Skipping!");
+                return;
+            }
 
             cfg.SetOwner(this);
             cfg.SetSerializationAddress($"{GUID}.{method.DeclaringType.Namespace}.{method.DeclaringType.Name}.{method.Name}"); //This isnt needed, but who cares.
@@ -141,13 +196,16 @@ namespace Configgy
 
         private void ProcessField(FieldInfo field)
         {
-            if (!field.IsStatic) //no instance!!
-                return;
-
             ConfiggableAttribute cfg = field.GetCustomAttribute<ConfiggableAttribute>();
 
             if (cfg == null)
                 return;
+
+            if (!field.IsStatic) //no instance!!
+            {
+                Debug.LogError($"Configgy.ConfigBuilder:{GUID}: attempted to register field {field.DeclaringType.Name}.{field.Name}. But it is not static. Skipping!");
+                return;
+            }
 
             cfg.SetOwner(this);
             cfg.SetSerializationAddress($"{GUID}.{field.DeclaringType.Namespace}.{field.DeclaringType.Name}.{field.Name}");
@@ -166,36 +224,6 @@ namespace Configgy
             }
         }
 
-        private void ProcessProperty(PropertyInfo property)
-        {
-            if (!property.CanWrite) //no instance!!
-                return;
-
-            if (!property.CanRead)
-                return;
-
-            ConfiggableAttribute cfg = property.GetCustomAttribute<ConfiggableAttribute>();
-
-            if (cfg == null)
-                return;
-
-            cfg.SetOwner(this);
-            cfg.SetSerializationAddress($"{GUID}.{property.DeclaringType.Namespace}.{property.DeclaringType.Name}.{property.Name}");
-
-            if (string.IsNullOrEmpty(cfg.DisplayName))
-                cfg.SetDisplayNameFromCamelCase(property.Name);
-
-            if (typeof(IConfigElement).IsAssignableFrom(property.PropertyType))
-            {
-                IConfigElement cfgElement = (IConfigElement)property.GetValue(null);
-                RegisterElementCore(cfg, cfgElement);
-            }
-            else
-            {
-                //RegisterPrimitive(cfg, field);
-            }
-        }
-
         private void RegisterMethodAsButton(ConfiggableAttribute descriptor, MethodInfo method)
         {
             ConfigButton button = new ConfigButton(() =>
@@ -203,6 +231,8 @@ namespace Configgy
                 method.Invoke(null, null);
             });
 
+            //Not really needed, but who cares.
+            button.BindConfig(this);
             button.BindDescriptor(descriptor);
             RegisterElementCore(descriptor, button);
         }
@@ -214,15 +244,15 @@ namespace Configgy
             _configElements.Add(configElement);
         }
 
+        /// <summary>
+        /// Manually registers a config element with a descriptor. Call <see cref="ConfigBuilder.Rebuild"/> to rebuild the menu after adding elements.
+        /// </summary>
+        /// <param name="descriptor"></param>
+        /// <param name="configElement"></param>
         public void RegisterElement(ConfiggableAttribute descriptor, IConfigElement configElement)
         {
-            if (!Initialized)
-                Build();
-
+            BuildInternal();
             RegisterElementCore(descriptor, configElement);
-
-            if(Initialized)
-                OnConfigElementsChanged?.Invoke(_configElements.ToArray());
         }
 
 
@@ -250,6 +280,7 @@ namespace Configgy
                 floatElement.OnValueChanged += (v) => field.SetValue(null, v); //this is cursed as hell lol, dont care
                 floatElement.BindDescriptor(descriptor);
                 RegisterElementCore(descriptor, floatElement);
+                return;
             }
 
             if (field.FieldType == typeof(int))
@@ -273,6 +304,74 @@ namespace Configgy
                 intElement.OnValueChanged += (v) => field.SetValue(null, v);
                 intElement.BindDescriptor(descriptor);
                 RegisterElementCore(descriptor, intElement);
+                return;
+            }
+
+            if (field.FieldType == typeof(uint))
+            {
+                ConfigInputField<uint> uintElement = null;
+                uint baseValue = (uint)field.GetValue(null);
+                uintElement = new ConfigInputField<uint>(baseValue);
+
+                uintElement.OnValueChanged += (v) => field.SetValue(null, v);
+                uintElement.BindDescriptor(descriptor);
+                RegisterElementCore(descriptor, uintElement);
+                return;
+            }
+
+            if (field.FieldType == typeof(long))
+            {
+                ConfigInputField<long> longElement = null;
+                long baseValue = (long)field.GetValue(null);
+                longElement = new ConfigInputField<long>(baseValue);
+
+                longElement.OnValueChanged += (v) => field.SetValue(null, v);
+                longElement.BindDescriptor(descriptor);
+                RegisterElementCore(descriptor, longElement);
+                return;
+            }
+
+            if (field.FieldType == typeof(Quaternion))
+            {
+                Quaternion val = (Quaternion)field.GetValue(null);
+
+                ConfigQuaternion QuaternionElement = new ConfigQuaternion(val);
+                QuaternionElement.OnValueChanged += (v) => field.SetValue(null, v);
+                QuaternionElement.BindDescriptor(descriptor);
+                RegisterElementCore(descriptor, QuaternionElement);
+                return;
+            }
+
+            if (field.FieldType == typeof(Vector3))
+            {
+                Vector3 baseValue = (Vector3)field.GetValue(null);
+                ConfigVector3 Vector3Element = new ConfigVector3(baseValue);
+                Vector3Element.OnValueChanged += (v) => field.SetValue(null, v);
+                Vector3Element.BindDescriptor(descriptor);
+                RegisterElementCore(descriptor, Vector3Element);
+                return;
+            }
+
+            if (field.FieldType == typeof(Vector2))
+            {
+                Vector2 baseValue = (Vector2)field.GetValue(null);
+                ConfigVector2 Vector2Element = new ConfigVector2(baseValue);
+                Vector2Element.OnValueChanged += (v) => field.SetValue(null, v);
+                Vector2Element.BindDescriptor(descriptor);
+                RegisterElementCore(descriptor, Vector2Element);
+                return;
+            }
+
+            if (field.FieldType == typeof(ulong))
+            {
+                ConfigInputField<ulong> ulongElement = null;
+                ulong baseValue = (ulong)field.GetValue(null);
+                ulongElement = new ConfigInputField<ulong>(baseValue);
+
+                ulongElement.OnValueChanged += (v) => field.SetValue(null, v);
+                ulongElement.BindDescriptor(descriptor);
+                RegisterElementCore(descriptor, ulongElement);
+                return;
             }
 
             if (field.FieldType == typeof(bool))
@@ -291,6 +390,17 @@ namespace Configgy
                 stringElement.OnValueChanged += (v) => field.SetValue(null, v);
                 stringElement.BindDescriptor(descriptor);
                 RegisterElementCore(descriptor, stringElement);
+                return;
+            }
+
+            if (field.FieldType == typeof(char))
+            {
+                char baseValue = (char)field.GetValue(null);
+                ConfigInputField<char> stringElement = new ConfigInputField<char>(baseValue);
+                stringElement.OnValueChanged += (v) => field.SetValue(null, v);
+                stringElement.BindDescriptor(descriptor);
+                RegisterElementCore(descriptor, stringElement);
+                return;
             }
 
             if (field.FieldType == typeof(Color))
@@ -300,7 +410,28 @@ namespace Configgy
                 colorElement.OnValueChanged += (v) => field.SetValue(null, v);
                 colorElement.BindDescriptor(descriptor);
                 RegisterElementCore(descriptor, colorElement);
+                return;
             }
+
+            if (field.FieldType.IsEnum)
+            {
+                ConfigDropdown<int> enumElement = null;
+                int baseValue = (int)field.GetValue(null);
+
+                List<int> values = new List<int>();
+                foreach (var value in Enum.GetValues(field.FieldType))
+                {
+                    values.Add(Convert.ToInt32(value));
+                }
+
+                enumElement = new ConfigDropdown<int>(values.ToArray(), Enum.GetNames(field.FieldType), baseValue);
+                enumElement.OnValueChanged += (v) => field.SetValue(null, v);
+                enumElement.BindDescriptor(descriptor);
+                RegisterElementCore(descriptor, enumElement);
+                return;
+            }
+
+            Debug.LogError($"Configgy.ConfigBuilder:{GUID}: attempted to register field {field.DeclaringType.Name}.{field.Name}. But it's type ({field.FieldType.Name}) is not supported. Skipping!");
         }
 
         List<SerializedConfiggable> _data;

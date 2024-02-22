@@ -159,7 +159,6 @@ namespace Configgy
             RefreshValue();
         }
 
-
         protected override void BuildElementCore(ConfiggableAttribute configgable, RectTransform rect)
         {
             DynUI.ConfigUI.CreateElementSlot(rect, this, (r) =>

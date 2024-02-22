@@ -2,9 +2,7 @@
 using Configgy.UI;
 using HarmonyLib;
 using System.Linq;
-using System.Net.Http.Headers;
 using UnityEngine;
-using UnityEngine.Assertions.Must;
 using UnityEngine.UI;
 
 namespace Configgy.Patches
