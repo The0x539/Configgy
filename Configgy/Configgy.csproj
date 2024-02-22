@@ -4,9 +4,14 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>Configgy</AssemblyName>
     <Description>Configuration plugin</Description>
-    <Version>1.0.0</Version>
+    <Version>1.0.3</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
+    <Company>Hydraxous</Company>
+    <Copyright>Copyright © 2024 Hydraxous. All rights reserved.</Copyright>
+    <RepositoryUrl>https://github.com/Hydraxous/Configgy</RepositoryUrl>
+    <Authors>Hydraxous</Authors>
+    <Title>Configgy</Title>
   </PropertyGroup>
   
   <ItemGroup>
@@ -119,8 +124,5 @@
   </Target>
   <Target Name="CopyModDlls" AfterTargets="AfterBuild">
     <Copy SourceFiles="$(OutDir)/$(AssemblyName).dll" DestinationFolder="$(ULTRAKILLPath)\BepInEx\Plugins\Configgy\" />
-  </Target>
-  <Target Name="CopyModDlls2" AfterTargets="AfterBuild">
-    <Copy SourceFiles="$(OutDir)/$(AssemblyName).dll" DestinationFolder="$(UnityKitPath)" />
   </Target>
 </Project>

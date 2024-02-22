@@ -10,8 +10,11 @@ namespace Configgy
         public Action OnPress;
         private string label;
 
-        private Button buttonInstance;
+        private Button instancedButton;
         private Text buttonText;
+
+        public Button GetButton() => instancedButton;
+        public Text GetButtonLabel() => buttonText;
 
         public ConfigButton(Action onPress, string label = null)
         {
@@ -31,7 +34,7 @@ namespace Configgy
             return descriptor;
         }
 
-        private string GetLabel()
+        public string GetLabel()
         {
             if (!string.IsNullOrEmpty(label))
                 return label;
@@ -42,22 +45,18 @@ namespace Configgy
             return OnPress.Method.Name;
         }
 
+        private void OnButtonPressed()
+        {
+            OnPress?.Invoke();
+        }
+
         public void SetLabel(string label)
         {
             this.label = label;
-            
-            if (buttonText)
-                buttonText.text = label;
-        }
 
-        public void SetAction(Action onPress)
-        {
-            this.OnPress = onPress;
-
-            if (buttonInstance)
+            if (buttonText != null)
             {
-                buttonInstance.onClick.RemoveAllListeners();
-                buttonInstance.onClick.AddListener(OnPress.Invoke);
+                buttonText.text = GetLabel();
             }
         }
 
@@ -69,19 +68,19 @@ namespace Configgy
 
                 DynUI.Button(panel.RectTransform, (b) =>
                 {
-                    buttonInstance = b;
-                    buttonText = b.GetComponentInChildren<Text>();
-                    buttonText.text = GetLabel();
-
+                    instancedButton = b;
+                    Text text = b.GetComponentInChildren<Text>();
+                    buttonText = text;
+                    text.text = GetLabel();
                     RectTransform buttonTf = b.GetComponent<RectTransform>();
                     DynUI.Layout.FillParent(buttonTf);
-                    b.onClick.AddListener(() => { OnPress?.Invoke(); });
+                    b.onClick.AddListener(OnButtonPressed);
                 });
             });
         }
 
-        public virtual void OnMenuOpen() { }
-        public virtual void OnMenuClose() { }
+        public void OnMenuOpen() { }
+        public void OnMenuClose() { }
         public void BindConfig(ConfigBuilder configBuilder) { }
     }
 }
