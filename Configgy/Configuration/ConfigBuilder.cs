@@ -283,113 +283,45 @@ namespace Configgy
                 return entry.Description.AcceptableValues.IsValid(val);
             }
 
-            if (entry.SettingType == typeof(bool))
+            IConfigElement elem = entry switch
             {
-                BepinToggle toggleElement = new BepinToggle((bool)entry.DefaultValue, entry as ConfigEntry<bool>);
-                RegisterElementCore(attribute, toggleElement);
-                return;
+                ConfigEntry<bool> e => new BepinToggle(e.GetDefault(), e),
+                ConfigEntry<float> e => new BepinInputField<float>(e.GetDefault(), e, basicValidator),
+                ConfigEntry<int> e => new BepinInputField<int>(e.GetDefault(), e, basicValidator),
+                ConfigEntry<string> e => new BepinInputField<string>(e.GetDefault(), e, basicValidator),
+                ConfigEntry<uint> e => new BepinInputField<uint>(e.GetDefault(), e, basicValidator),
+                ConfigEntry<long> e => new BepinInputField<long>(e.GetDefault(), e, basicValidator),
+                ConfigEntry<ulong> e => new BepinInputField<ulong>(e.GetDefault(), e, basicValidator),
+                ConfigEntry<char> e => new BepinInputField<char>(e.GetDefault(), e, basicValidator),
+                ConfigEntry<Color> e => new BepinColor(e.GetDefault(), e),
+                ConfigEntry<Vector3> e => new BepinVector3(e.GetDefault(), e),
+                ConfigEntry<Vector2> e => new BepinVector2(e.GetDefault(), e),
+                ConfigEntry<Quaternion> e => new BepinQuaternion(e.GetDefault(), e),
+                ConfigEntry<KeyCode> e => new BepinKeybind(e),
+                ConfigEntry<KeyboardShortcut> e => ShortcutAsKeybind(e),
+                _ => null,
+            };
+
+            if (elem is null)
+            {
+                if (entry is not ConfigEntry<KeyboardShortcut>)
+            {
+                    Debug.LogWarning($"Configgy.ConfigBuilder:{GUID}: failed to auto generate BepInEx ConfigEntry {entry.Definition.Section}.{entry.Definition.Key} because its type ({entry.SettingType.Name}) is not supported.");
+            }
             }
 
-            if (entry.SettingType == typeof(float))
-            {
-                BepinInputField<float> floatElement = new BepinInputField<float>((float)entry.DefaultValue, entry as ConfigEntry<float>, basicValidator);
-                RegisterElementCore(attribute, floatElement);
-                return;
+            RegisterElementCore(attribute, elem);
             }
 
-            if (entry.SettingType == typeof(int))
+        private IConfigElement ShortcutAsKeybind(ConfigEntry<KeyboardShortcut> entry)
             {
-                BepinInputField<int> intElement = new BepinInputField<int>((int)entry.DefaultValue, entry as ConfigEntry<int>, basicValidator);
-                RegisterElementCore(attribute, intElement);
-                return;
-            }
-
-            if (entry.SettingType == typeof(string))
+            if (entry.Value.Modifiers.Any())
             {
-                BepinInputField<string> stringElement = new BepinInputField<string>((string)entry.DefaultValue, entry as ConfigEntry<string>, basicValidator);
-                RegisterElementCore(attribute, stringElement);
-                return;
-            }
-
-            if (entry.SettingType == typeof(uint))
-            {
-                BepinInputField<uint> uintElement = new BepinInputField<uint>((uint)entry.DefaultValue, entry as ConfigEntry<uint>, basicValidator);
-                RegisterElementCore(attribute, uintElement);
-                return;
-            }
-
-            if (entry.SettingType == typeof(long))
-            {
-                BepinInputField<long> longElement = new BepinInputField<long>((long)entry.DefaultValue, entry as ConfigEntry<long>, basicValidator);
-                RegisterElementCore(attribute, longElement);
-                return;
-            }
-
-            if (entry.SettingType == typeof(ulong))
-            {
-                BepinInputField<ulong> ulongElement = new BepinInputField<ulong>((ulong)entry.DefaultValue, entry as ConfigEntry<ulong>, basicValidator);
-                RegisterElementCore(attribute, ulongElement);
-                return;
-            }
-
-            if (entry.SettingType == typeof(char))
-            {
-                BepinInputField<char> charElement = new BepinInputField<char>((char)entry.DefaultValue, entry as ConfigEntry<char>, basicValidator);
-                RegisterElementCore(attribute, charElement);
-                return;
-            }
-
-            if (entry.SettingType == typeof(Color))
-            {
-                BepinColor colorElement = new BepinColor((Color)entry.DefaultValue, entry as ConfigEntry<Color>);
-                RegisterElementCore(attribute, colorElement);
-                return;
-            }
-
-            if (entry.SettingType == typeof(Vector3))
-            {
-                BepinVector3 vector3Element = new BepinVector3((Vector3)entry.DefaultValue, entry as ConfigEntry<Vector3>);
-                RegisterElementCore(attribute, vector3Element);
-                return;
-            }
-
-            if (entry.SettingType == typeof(Vector2))
-            {
-                BepinVector2 vector2 = new BepinVector2((Vector2)entry.DefaultValue, entry as ConfigEntry<Vector2>);
-                RegisterElementCore(attribute, vector2);
-                return;
-            }
-
-            if (entry.SettingType == typeof(Quaternion))
-            {
-                BepinQuaternion quaternion = new BepinQuaternion((Quaternion)entry.DefaultValue, entry as ConfigEntry<Quaternion>);
-                RegisterElementCore(attribute, quaternion);
-                return;
-            }
-
-            if (entry.SettingType == typeof(KeyCode))
-            {
-                BepinKeybind keybind = new BepinKeybind(entry as ConfigEntry<KeyCode>);
-                RegisterElementCore(attribute, keybind);
-                return;
-            }
-
-            if (entry.SettingType == typeof(KeyboardShortcut))
-            {
-                ConfigEntry<KeyboardShortcut> bind = entry as ConfigEntry<KeyboardShortcut>;
-                if (bind.Value.Modifiers.Any())
-                {
                     Debug.LogWarning($"Configgy.ConfigBuilder:{GUID}: failed to auto generate BepInEx ConfigEntry {entry.Definition.Section}.{entry.Definition.Key} because Configgy does not support multi key keybinds. Sowwy TwT");
-                    return;
+                return null;
                 }
-
-                BepinKeybind keybind = new BepinKeybind(bind);
-                RegisterElementCore(attribute, keybind);
-                return;
+            return new BepinKeybind(entry);
             }
-
-            Debug.LogWarning($"Configgy.ConfigBuilder:{GUID}: failed to auto generate BepInEx ConfigEntry {entry.Definition.Section}.{entry.Definition.Key} because its type ({entry.SettingType.Name}) is not supported.");
-        }
 
         private void RegisterPrimitive(ConfiggableAttribute descriptor, FieldInfo field)
         {
