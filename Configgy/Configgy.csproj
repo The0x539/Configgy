@@ -15,6 +15,10 @@
   </PropertyGroup>
   
   <ItemGroup>
+		<EditorConfigFiles Include=".editorconfig" />
+	</ItemGroup>
+
+	<ItemGroup>
     <Reference Include="Assembly-CSharp">
       <HintPath>$(ULTRAKILLPath)\ULTRAKILL_Data\Managed\Assembly-CSharp.dll</HintPath>
     </Reference>
