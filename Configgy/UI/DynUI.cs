@@ -246,7 +246,12 @@ namespace Configgy.UI
             {
                 rt.anchoredPosition = new Vector2(-(padding*2f),-(padding*2f));
             }
-            
+
+            public static void CenterAnchor(RectTransform rt)
+            {
+                rt.anchorMin = new Vector2(0.5f, 0.5f);
+                rt.anchorMax = new Vector2(0.5f, 0.5f);
+            }
         }
 
     }
