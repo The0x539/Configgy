@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Configgy.UI
@@ -70,8 +69,11 @@ namespace Configgy.UI
 
         public void SetFooter(string footerText) 
         {
+            this.footerText = footerText;
             this.footer.text = footerText.TrimEnd('/', '\n', '\r');
         }
+
+        private string footerText;
 
         public void AddElement(IConfigElement configElement)
         {
@@ -120,7 +122,19 @@ namespace Configgy.UI
 
             foreach(IConfigElement configElement in elements.OrderBy(x=>x.GetDescriptor()?.OrderInList))
             {
-                configElement.BuildElement(contentBody);
+                if(configElement == null)
+                {
+                    Debug.LogError($"Configgy: Null element in page {footer}");
+                    continue;
+                }
+
+                try
+                {
+                    configElement.BuildElement(contentBody);
+                } catch (System.Exception e)
+                {
+                    Debug.LogException(e);
+                }
             }
         }
 

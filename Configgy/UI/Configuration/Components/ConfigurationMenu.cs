@@ -105,15 +105,22 @@ namespace Configgy.UI
                 pageManifest.Add("", rootPage);
             });
 
-            foreach(var menu in menus.OrderBy(x => x.OwnerDisplayName))
+            foreach(var menu in menus.OrderBy(x => x.DisplayName))
             {
-                BuildMenu(menu.GetConfigElements());
+                IConfigElement[] elements = menu.GetConfigElements();
+                if(elements == null)
+                {
+                    Debug.LogError($"ConfigBuilder: {menu.GUID} has null elements. It cannot be built.");
+                    continue;
+                }
+
+                BuildMenu(elements);
             }
         }
 
         private void BuildMenu(IConfigElement[] configElements)
         {
-            foreach (IConfigElement configElement in configElements.OrderBy(x=>x.GetDescriptor().Path))
+            foreach (IConfigElement configElement in configElements.OrderBy(x => x.GetDescriptor().Path))
             {
                 BuildElement(configElement);
             }
@@ -184,7 +191,7 @@ namespace Configgy.UI
 
             if (descriptor != null && descriptor.Owner != null)
             {
-                path = $"{descriptor.Owner.OwnerDisplayName}";
+                path = $"{descriptor.Owner.DisplayName}";
                 if(!string.IsNullOrEmpty(descriptor.Path))
                     path += $"/{descriptor.Path}";
             }else

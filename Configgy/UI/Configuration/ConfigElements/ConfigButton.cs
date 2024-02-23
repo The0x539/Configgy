@@ -10,6 +10,12 @@ namespace Configgy
         public Action OnPress;
         private string label;
 
+        private Button instancedButton;
+        private Text buttonText;
+
+        public Button GetButton() => instancedButton;
+        public Text GetButtonLabel() => buttonText;
+
         public ConfigButton(Action onPress, string label = null)
         {
             this.OnPress = onPress;
@@ -28,7 +34,7 @@ namespace Configgy
             return descriptor;
         }
 
-        private string GetLabel()
+        public string GetLabel()
         {
             if (!string.IsNullOrEmpty(label))
                 return label;
@@ -39,6 +45,21 @@ namespace Configgy
             return OnPress.Method.Name;
         }
 
+        private void OnButtonPressed()
+        {
+            OnPress?.Invoke();
+        }
+
+        public void SetLabel(string label)
+        {
+            this.label = label;
+
+            if (buttonText != null)
+            {
+                buttonText.text = GetLabel();
+            }
+        }
+
         public void BuildElement(RectTransform rect)
         {
             DynUI.Frame(rect, (panel) =>
@@ -47,10 +68,13 @@ namespace Configgy
 
                 DynUI.Button(panel.RectTransform, (b) =>
                 {
-                    b.GetComponentInChildren<Text>().text = GetLabel();
+                    instancedButton = b;
+                    Text text = b.GetComponentInChildren<Text>();
+                    buttonText = text;
+                    text.text = GetLabel();
                     RectTransform buttonTf = b.GetComponent<RectTransform>();
                     DynUI.Layout.FillParent(buttonTf);
-                    b.onClick.AddListener(() => { OnPress?.Invoke(); });
+                    b.onClick.AddListener(OnButtonPressed);
                 });
             });
         }

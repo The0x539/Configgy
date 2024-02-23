@@ -4,12 +4,12 @@ namespace Configgy
 {
     public interface IConfigElement
     {
-        public void BindDescriptor (ConfiggableAttribute configgable);
-        public ConfiggableAttribute GetDescriptor();
+        internal void BindDescriptor (ConfiggableAttribute configgable);
+        internal ConfiggableAttribute GetDescriptor();
         public void BuildElement(RectTransform rect);
 
         public void OnMenuOpen();
         public void OnMenuClose();
-        public void BindConfig(ConfigBuilder configBuilder);
+        internal void BindConfig(ConfigBuilder configBuilder);
     }
 }

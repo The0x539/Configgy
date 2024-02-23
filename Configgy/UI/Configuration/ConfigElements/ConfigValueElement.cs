@@ -81,7 +81,6 @@ namespace Configgy
             IsDirty = false;
         }
 
-
         public T GetValue()
         {
             return GetValueCore();

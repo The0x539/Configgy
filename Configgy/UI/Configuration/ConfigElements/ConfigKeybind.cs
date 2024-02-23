@@ -11,6 +11,7 @@ namespace Configgy
         public ConfigKeybind(KeyCode keyCode) : base(keyCode)
         {
             OnValueChanged += (_) => RefreshElementValue();
+            RefreshElementValue();
         }
 
         private Text keybindText;
@@ -100,6 +101,9 @@ namespace Configgy
 
         protected override void RefreshElementValueCore()
         {
+            if (keybindText == null)
+                return;
+
             keybindText.text = GetValue().ToString();
         }
 

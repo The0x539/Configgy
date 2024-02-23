@@ -26,17 +26,15 @@ namespace Configgy
 
         private string[] CreateNames(T[] values, string[] providedNames)
         {
+            //If the provided names are null, we just use the ToString method of the values.
+            if (providedNames == null)
+                return values.Select(x => x.ToString()).ToArray();
+
             string[] names = new string[values.Length];
 
-            if (providedNames == null)
-            {
-                return values.Select(x => x.ToString()).ToArray();
-            }
-
+            //If the provided names are less than the values, we use the provided names and then ToString for the rest.
             for (int i = 0; i < values.Length; i++)
-            {
                 names[i] = (i < providedNames.Length) ? providedNames[i] : values[i].ToString();
-            }
 
             return names;
         }
@@ -62,7 +60,6 @@ namespace Configgy
         protected override void LoadValueCore()
         {
             //Get value from data manager.
-
             firstLoadDone = true;
 
             if (config.TryGetValueAtAddress<int>(descriptor.SerializationAddress, out int value))
@@ -143,9 +140,7 @@ namespace Configgy
         protected override void SetValueCore(T value)
         {
             if(!Values.Contains(value))
-            {
                 throw new KeyNotFoundException("Unable to set Dropdown's value directly. It is not contained within the values. Use SetValuesAndNames and SetIndex.");
-            }
 
             base.SetValueCore(value);
         }
@@ -163,7 +158,6 @@ namespace Configgy
             currentIndex = index;
             RefreshValue();
         }
-
 
         protected override void BuildElementCore(ConfiggableAttribute configgable, RectTransform rect)
         {
