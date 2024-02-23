@@ -8,7 +8,7 @@ namespace Configgy.Configuration.AutoGeneration
     {
         protected ConfigEntry<T> entry;
 
-        public BepinInputField(T defaultValue, ConfigEntry<T> entry, Func<T, bool> inputValidator = null, Func<string, (bool, T)> typeConverter = null) : base(defaultValue, inputValidator, typeConverter)
+        public BepinInputField(ConfigEntry<T> entry, Func<T, bool> inputValidator = null, Func<string, (bool, T)> typeConverter = null) : base(entry.GetDefault(), inputValidator, typeConverter)
         {
             this.entry = entry;
         }
