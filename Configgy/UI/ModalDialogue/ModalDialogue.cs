@@ -81,40 +81,42 @@ namespace Configgy
             });
         }
 
-        /// <summary>
-        /// Shows an InputField dialogue with a title, message, and a submit button.
-        /// </summary>
-        /// <param name="title">The title of your message</param>
-        /// <param name="message">The message to display as the body</param>
-        /// <param name="onSubmit">Invokes delegate with true if the user clicked submit or false if the dialogue was exited along with the text inputed by the user</param>
-        /// <param name="onChanged">Invokes delegate every time the input string has changed.</param>
-        public static void InputField(string title, string message, Action<bool, string> onSubmit, Action<string> onChanged = null)
-        {
-            if(ModalDialogueManager.Instance == null)
-            {
-                Debug.LogError("No ModalDialogueManager found in scene.");
-                return;
-            }
+        //Next update :p
 
-            //TODO: Implement input field dialogue.
-        }
+        ///// <summary>
+        ///// Shows an InputField dialogue with a title, message, and a submit button.
+        ///// </summary>
+        ///// <param name="title">The title of your message</param>
+        ///// <param name="message">The message to display as the body</param>
+        ///// <param name="onSubmit">Invokes delegate with true if the user clicked submit or false if the dialogue was exited along with the text inputed by the user</param>
+        ///// <param name="onChanged">Invokes delegate every time the input string has changed.</param>
+        //public static void InputField(string title, string message, Action<bool, string> onSubmit, Action<string> onChanged = null)
+        //{
+        //    if(ModalDialogueManager.Instance == null)
+        //    {
+        //        Debug.LogError("No ModalDialogueManager found in scene.");
+        //        return;
+        //    }
 
-        /// <summary>
-        /// Shows a Slider dialogue with a title, message, and a submit button.
-        /// </summary>
-        /// <param name="title">The title of your message</param>
-        /// <param name="message">The body of your message</param>
-        /// <param name="onComplete">invokes delegate on dialogue complete with a confirm or deny as the boolean and the float value of the slider</param>
-        /// <param name="onInstance">invoked when the slider is shown</param>
-        /// <param name="onChanged">invoked when the slider value changes</param>
-        public static void Slider(string title, string message, Action<bool, float> onComplete, Action<Slider> onInstance = null, Action<float> onChanged = null)
-        {
-            if (ModalDialogueManager.Instance == null)
-            {
-                Debug.LogError("No ModalDialogueManager found in scene.");
-                return;
-            }
-        }
+        //    //TODO: Implement input field dialogue.
+        //}
+
+        ///// <summary>
+        ///// Shows a Slider dialogue with a title, message, and a submit button.
+        ///// </summary>
+        ///// <param name="title">The title of your message</param>
+        ///// <param name="message">The body of your message</param>
+        ///// <param name="onComplete">invokes delegate on dialogue complete with a confirm or deny as the boolean and the float value of the slider</param>
+        ///// <param name="onInstance">invoked when the slider is shown</param>
+        ///// <param name="onChanged">invoked when the slider value changes</param>
+        //public static void Slider(string title, string message, Action<bool, float> onComplete, Action<Slider> onInstance = null, Action<float> onChanged = null)
+        //{
+        //    if (ModalDialogueManager.Instance == null)
+        //    {
+        //        Debug.LogError("No ModalDialogueManager found in scene.");
+        //        return;
+        //    }
+        //}
 
 
     }

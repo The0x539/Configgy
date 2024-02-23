@@ -1,7 +1,9 @@
 ﻿using BepInEx;
 using Configgy.Assets;
+using Configgy.Configuration.AutoGeneration;
 using HarmonyLib;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Configgy
 {
@@ -35,7 +37,17 @@ namespace Configgy
                 }
             });
 
+            SceneManager.sceneLoaded += SceneManager_sceneLoaded;
+
             Logger.LogInfo($"Plugin {ConstInfo.NAME} is loaded!");
+        }
+
+        private void SceneManager_sceneLoaded(Scene _, LoadSceneMode __)
+        {
+            if (SceneHelper.CurrentScene != "Main Menu")
+                return;
+
+            BepinAutoGenerator.Generate();
         }
     }
 }

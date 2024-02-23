@@ -1,4 +1,6 @@
-﻿using System;
+﻿using BepInEx.Configuration;
+using Configgy.Configuration.AutoGeneration;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -99,6 +101,9 @@ namespace Configgy
             BuildInternal();
         }
 
+        
+
+
         /// <summary>
         /// Builds your configuration menu and registers it with Configgy.
         /// </summary>
@@ -142,11 +147,10 @@ namespace Configgy
         }
 
         /// <summary>
-        /// Forcefully rebuilds the configuration menu. Do not use this in a hot path.
+        /// Rebuilds the config menu. Do not use in a hot path as this is resource intensive.
         /// </summary>
         public void Rebuild()
         {
-            BuildInternal();
             OnConfigElementsChanged?.Invoke(_configElements.ToArray());
         }
 
@@ -245,7 +249,7 @@ namespace Configgy
         }
 
         /// <summary>
-        /// Manually registers a config element with a descriptor. Call <see cref="ConfigBuilder.Rebuild"/> to rebuild the menu after adding elements.
+        /// Manually registers a config element with a descriptor. Call <see cref="ConfigBuilder.BuildWithoutScan"/> to rebuild the menu after adding elements.
         /// </summary>
         /// <param name="descriptor"></param>
         /// <param name="configElement"></param>
@@ -255,6 +259,137 @@ namespace Configgy
             RegisterElementCore(descriptor, configElement);
         }
 
+        public void RegisterBepInExConfigEntry(ConfigEntryBase entry)
+        {
+            BuildInternal();
+
+            //Use the display name for the parent of this entry.
+            ConfiggableAttribute attribute = new ConfiggableAttribute(
+                entry.Definition.Section,
+                entry.Definition.Key,
+                description: entry.Description.Description
+                );
+
+            attribute.SetOwner(this);
+
+            bool basicValidator<T>(T val)
+            {
+                if (entry.Description == null)
+                    return true;
+
+                if (entry.Description.AcceptableValues == null)
+                    return true;
+
+                return entry.Description.AcceptableValues.IsValid(val);
+            }
+
+            if (entry.SettingType == typeof(bool))
+            {
+                BepinToggle toggleElement = new BepinToggle((bool)entry.DefaultValue, entry as ConfigEntry<bool>);
+                RegisterElementCore(attribute, toggleElement);
+                return;
+            }
+
+            if (entry.SettingType == typeof(float))
+            {
+                BepinInputField<float> floatElement = new BepinInputField<float>((float)entry.DefaultValue, entry as ConfigEntry<float>, basicValidator);
+                RegisterElementCore(attribute, floatElement);
+                return;
+            }
+
+            if (entry.SettingType == typeof(int))
+            {
+                BepinInputField<int> intElement = new BepinInputField<int>((int)entry.DefaultValue, entry as ConfigEntry<int>, basicValidator);
+                RegisterElementCore(attribute, intElement);
+                return;
+            }
+
+            if (entry.SettingType == typeof(string))
+            {
+                BepinInputField<string> stringElement = new BepinInputField<string>((string)entry.DefaultValue, entry as ConfigEntry<string>, basicValidator);
+                RegisterElementCore(attribute, stringElement);
+                return;
+            }
+
+            if (entry.SettingType == typeof(uint))
+            {
+                BepinInputField<uint> uintElement = new BepinInputField<uint>((uint)entry.DefaultValue, entry as ConfigEntry<uint>, basicValidator);
+                RegisterElementCore(attribute, uintElement);
+                return;
+            }
+
+            if (entry.SettingType == typeof(long))
+            {
+                BepinInputField<long> longElement = new BepinInputField<long>((long)entry.DefaultValue, entry as ConfigEntry<long>, basicValidator);
+                RegisterElementCore(attribute, longElement);
+                return;
+            }
+
+            if (entry.SettingType == typeof(ulong))
+            {
+                BepinInputField<ulong> ulongElement = new BepinInputField<ulong>((ulong)entry.DefaultValue, entry as ConfigEntry<ulong>, basicValidator);
+                RegisterElementCore(attribute, ulongElement);
+                return;
+            }
+
+            if (entry.SettingType == typeof(char))
+            {
+                BepinInputField<char> charElement = new BepinInputField<char>((char)entry.DefaultValue, entry as ConfigEntry<char>, basicValidator);
+                RegisterElementCore(attribute, charElement);
+                return;
+            }
+
+            if (entry.SettingType == typeof(Color))
+            {
+                BepinColor colorElement = new BepinColor((Color)entry.DefaultValue, entry as ConfigEntry<Color>);
+                RegisterElementCore(attribute, colorElement);
+                return;
+            }
+
+            if (entry.SettingType == typeof(Vector3))
+            {
+                BepinVector3 vector3Element = new BepinVector3((Vector3)entry.DefaultValue, entry as ConfigEntry<Vector3>);
+                RegisterElementCore(attribute, vector3Element);
+                return;
+            }
+
+            if (entry.SettingType == typeof(Vector2))
+            {
+                BepinVector2 vector2 = new BepinVector2((Vector2)entry.DefaultValue, entry as ConfigEntry<Vector2>);
+                RegisterElementCore(attribute, vector2);
+                return;
+            }
+
+            if (entry.SettingType == typeof(Quaternion))
+            {
+                BepinQuaternion quaternion = new BepinQuaternion((Quaternion)entry.DefaultValue, entry as ConfigEntry<Quaternion>);
+                RegisterElementCore(attribute, quaternion);
+                return;
+            }
+
+            if (entry.SettingType == typeof(KeyCode))
+            {
+                BepinKeybind keybind = new BepinKeybind(entry as ConfigEntry<KeyCode>);
+                RegisterElementCore(attribute, keybind);
+                return;
+            }
+
+            if (entry.SettingType == typeof(KeyboardShortcut))
+            {
+                ConfigEntry<KeyboardShortcut> bind = entry as ConfigEntry<KeyboardShortcut>;
+                if (bind.Value.Modifiers.Any())
+                {
+                    Debug.LogWarning($"Configgy.ConfigBuilder:{GUID}: failed to auto generate BepInEx ConfigEntry {entry.Definition.Section}.{entry.Definition.Key} because Configgy does not support multi key keybinds. Sowwy TwT");
+                    return;
+                }
+
+                BepinKeybind keybind = new BepinKeybind(bind);
+                RegisterElementCore(attribute, keybind);
+                return;
+            }
+
+            Debug.LogWarning($"Configgy.ConfigBuilder:{GUID}: failed to auto generate BepInEx ConfigEntry {entry.Definition.Section}.{entry.Definition.Key} because its type ({entry.SettingType.Name}) is not supported.");
+        }
 
         private void RegisterPrimitive(ConfiggableAttribute descriptor, FieldInfo field)
         {
@@ -278,7 +413,6 @@ namespace Configgy
                 }
 
                 floatElement.OnValueChanged += (v) => field.SetValue(null, v); //this is cursed as hell lol, dont care
-                floatElement.BindDescriptor(descriptor);
                 RegisterElementCore(descriptor, floatElement);
                 return;
             }
@@ -302,7 +436,6 @@ namespace Configgy
                 }
 
                 intElement.OnValueChanged += (v) => field.SetValue(null, v);
-                intElement.BindDescriptor(descriptor);
                 RegisterElementCore(descriptor, intElement);
                 return;
             }
@@ -314,7 +447,6 @@ namespace Configgy
                 uintElement = new ConfigInputField<uint>(baseValue);
 
                 uintElement.OnValueChanged += (v) => field.SetValue(null, v);
-                uintElement.BindDescriptor(descriptor);
                 RegisterElementCore(descriptor, uintElement);
                 return;
             }
@@ -326,7 +458,6 @@ namespace Configgy
                 longElement = new ConfigInputField<long>(baseValue);
 
                 longElement.OnValueChanged += (v) => field.SetValue(null, v);
-                longElement.BindDescriptor(descriptor);
                 RegisterElementCore(descriptor, longElement);
                 return;
             }
@@ -337,7 +468,6 @@ namespace Configgy
 
                 ConfigQuaternion QuaternionElement = new ConfigQuaternion(val);
                 QuaternionElement.OnValueChanged += (v) => field.SetValue(null, v);
-                QuaternionElement.BindDescriptor(descriptor);
                 RegisterElementCore(descriptor, QuaternionElement);
                 return;
             }
@@ -347,7 +477,6 @@ namespace Configgy
                 Vector3 baseValue = (Vector3)field.GetValue(null);
                 ConfigVector3 Vector3Element = new ConfigVector3(baseValue);
                 Vector3Element.OnValueChanged += (v) => field.SetValue(null, v);
-                Vector3Element.BindDescriptor(descriptor);
                 RegisterElementCore(descriptor, Vector3Element);
                 return;
             }
@@ -357,7 +486,6 @@ namespace Configgy
                 Vector2 baseValue = (Vector2)field.GetValue(null);
                 ConfigVector2 Vector2Element = new ConfigVector2(baseValue);
                 Vector2Element.OnValueChanged += (v) => field.SetValue(null, v);
-                Vector2Element.BindDescriptor(descriptor);
                 RegisterElementCore(descriptor, Vector2Element);
                 return;
             }
@@ -369,7 +497,6 @@ namespace Configgy
                 ulongElement = new ConfigInputField<ulong>(baseValue);
 
                 ulongElement.OnValueChanged += (v) => field.SetValue(null, v);
-                ulongElement.BindDescriptor(descriptor);
                 RegisterElementCore(descriptor, ulongElement);
                 return;
             }
@@ -379,7 +506,6 @@ namespace Configgy
                 bool baseValue = (bool)field.GetValue(null);
                 ConfigToggle toggleElement = new ConfigToggle(baseValue);
                 toggleElement.OnValueChanged += (v) => field.SetValue(null, v);
-                toggleElement.BindDescriptor(descriptor);
                 RegisterElementCore(descriptor, toggleElement);
             }
 
@@ -388,7 +514,6 @@ namespace Configgy
                 string baseValue = (string)field.GetValue(null);
                 ConfigInputField<string> stringElement = new ConfigInputField<string>(baseValue);
                 stringElement.OnValueChanged += (v) => field.SetValue(null, v);
-                stringElement.BindDescriptor(descriptor);
                 RegisterElementCore(descriptor, stringElement);
                 return;
             }
@@ -398,7 +523,6 @@ namespace Configgy
                 char baseValue = (char)field.GetValue(null);
                 ConfigInputField<char> stringElement = new ConfigInputField<char>(baseValue);
                 stringElement.OnValueChanged += (v) => field.SetValue(null, v);
-                stringElement.BindDescriptor(descriptor);
                 RegisterElementCore(descriptor, stringElement);
                 return;
             }
@@ -408,7 +532,6 @@ namespace Configgy
                 Color baseValue = (Color)field.GetValue(null);
                 ConfigColor colorElement = new ConfigColor(baseValue);
                 colorElement.OnValueChanged += (v) => field.SetValue(null, v);
-                colorElement.BindDescriptor(descriptor);
                 RegisterElementCore(descriptor, colorElement);
                 return;
             }
@@ -426,7 +549,6 @@ namespace Configgy
 
                 enumElement = new ConfigDropdown<int>(values.ToArray(), Enum.GetNames(field.FieldType), baseValue);
                 enumElement.OnValueChanged += (v) => field.SetValue(null, v);
-                enumElement.BindDescriptor(descriptor);
                 RegisterElementCore(descriptor, enumElement);
                 return;
             }
