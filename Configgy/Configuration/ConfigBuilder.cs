@@ -272,27 +272,16 @@ namespace Configgy
 
             attribute.SetOwner(this);
 
-            bool basicValidator<T>(T val)
-            {
-                if (entry.Description == null)
-                    return true;
-
-                if (entry.Description.AcceptableValues == null)
-                    return true;
-
-                return entry.Description.AcceptableValues.IsValid(val);
-            }
-
-            IConfigElement elem = entry switch
+            IConfigElement configElement = entry switch
             {
                 ConfigEntry<bool> e => new BepinToggle(e),
-                ConfigEntry<float> e => new BepinInputField<float>(e, basicValidator),
-                ConfigEntry<int> e => new BepinInputField<int>(e, basicValidator),
-                ConfigEntry<string> e => new BepinInputField<string>(e, basicValidator),
-                ConfigEntry<uint> e => new BepinInputField<uint>(e, basicValidator),
-                ConfigEntry<long> e => new BepinInputField<long>(e, basicValidator),
-                ConfigEntry<ulong> e => new BepinInputField<ulong>(e, basicValidator),
-                ConfigEntry<char> e => new BepinInputField<char>(e, basicValidator),
+                ConfigEntry<float> e => BepinPrimitiveElement(e),
+                ConfigEntry<int> e => BepinPrimitiveElement(e),
+                ConfigEntry<string> e => BepinPrimitiveElement(e),
+                ConfigEntry<uint> e => BepinPrimitiveElement(e),
+                ConfigEntry<long> e => BepinPrimitiveElement(e),
+                ConfigEntry<ulong> e => BepinPrimitiveElement(e),
+                ConfigEntry<char> e => BepinPrimitiveElement(e),
                 ConfigEntry<Color> e => new BepinColor(e),
                 ConfigEntry<Vector3> e => new BepinVector3(e),
                 ConfigEntry<Vector2> e => new BepinVector2(e),
@@ -302,7 +291,7 @@ namespace Configgy
                 _ => null,
             };
 
-            if (elem is null)
+            if (configElement is null)
             {
                 if (entry is not ConfigEntry<KeyboardShortcut>)
             {
@@ -310,7 +299,29 @@ namespace Configgy
             }
             }
 
-            RegisterElementCore(attribute, elem);
+            RegisterElementCore(attribute, configElement);
+        }
+
+        private static IConfigElement BepinPrimitiveElement<T>(ConfigEntry<T> entry)
+            where T : IEquatable<T>
+        {
+            return (entry?.Description?.AcceptableValues) switch
+            {
+                // acceptable value ranges for single-precision floats and 32-bit signed integers get sliders
+                // TODO: make shit more generic so supporting long/uint/double wouldn't require defining more classes
+                AcceptableValueRange<float> range => new BepinFloatSlider(entry as ConfigEntry<float>, range),
+                AcceptableValueRange<int> range => new BepinIntegerSlider(entry as ConfigEntry<int>, range),
+
+                // anything with an AcceptableValueList gets a dropdown
+                // (as long as we managed to even call this method, which is a challenge for custom types)
+                AcceptableValueList<T> list => new BepinDropdown<T>(entry, list),
+
+                // fallback: if there's any sort of validator we can work with, use that
+                AcceptableValueBase avb => new BepinInputField<T>(entry, val => avb.IsValid(val)),
+
+                // fallback 2: billion-dollar-mistake boogaloo
+                null => new BepinInputField<T>(entry),
+            };
             }
 
         private IConfigElement ShortcutAsKeybind(ConfigEntry<KeyboardShortcut> entry)
