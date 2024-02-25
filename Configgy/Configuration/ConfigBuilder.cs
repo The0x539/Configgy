@@ -396,7 +396,6 @@ namespace Configgy
             if (field.FieldType == typeof(float))
             {
                 RangeAttribute range = field.GetCustomAttribute<RangeAttribute>();
-
                 ConfigValueElement<float> floatElement = null;
 
                 if (range == null)
@@ -507,6 +506,7 @@ namespace Configgy
                 ConfigToggle toggleElement = new ConfigToggle(baseValue);
                 toggleElement.OnValueChanged += (v) => field.SetValue(null, v);
                 RegisterElementCore(descriptor, toggleElement);
+                return;
             }
 
             if (field.FieldType == typeof(string))
