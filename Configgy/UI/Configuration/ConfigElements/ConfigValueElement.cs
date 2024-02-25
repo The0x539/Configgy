@@ -16,7 +16,7 @@ namespace Configgy
         protected bool firstLoadDone = false;
         public bool IsDirty { get; protected set; }
 
-        protected abstract void BuildElementCore(ConfiggableAttribute descriptor, RectTransform rect);
+        protected abstract void BuildElementCore(RectTransform rect);
 
         internal abstract void BindField(FieldInfo field);
 
@@ -45,7 +45,7 @@ namespace Configgy
             if (!initialized)
                 return;
 
-            BuildElementCore(descriptor, rect);
+            BuildElementCore(rect);
         }
 
         public void OnMenuOpen()
