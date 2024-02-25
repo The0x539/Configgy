@@ -257,6 +257,8 @@ namespace Configgy
             RegisterElementCore(descriptor, configElement);
         }
 
+        #region Element construction for BepInEx.Configuration support
+
         public void RegisterBepInExConfigEntry(ConfigEntryBase entry)
         {
             BuildInternal();
@@ -333,170 +335,90 @@ namespace Configgy
             return new BepinKeybind(entry);
         }
 
+        #endregion
+
+        #region Element construction for ConfiggableAttribute support
+
         private void RegisterPrimitive(ConfiggableAttribute descriptor, FieldInfo field)
         {
-            if (field.FieldType == typeof(float))
+            ConfigValueElement element = MakeElementForField(field);
+            if (element != null)
             {
-                RangeAttribute range = field.GetCustomAttribute<RangeAttribute>();
-                ConfigValueElement<float> floatElement = null;
-
-                if (range == null)
-                {
-                    float baseValue = (float)field.GetValue(null);
-                    floatElement = new ConfigInputField<float>(baseValue);
-
+                element.BindField(field);
+                RegisterElementCore(descriptor, element);
                 }
-                else
-                {
-                    float baseValue = (float)field.GetValue(null);
-                    float clampedValue = Mathf.Clamp(baseValue, range.min, range.max);
-                    floatElement = new FloatSlider(clampedValue, range.min, range.max);
                 }
 
-                floatElement.OnValueChanged += (v) => field.SetValue(null, v); //this is cursed as hell lol, dont care
-                RegisterElementCore(descriptor, floatElement);
-                return;
-            }
-
-            if (field.FieldType == typeof(int))
+        private ConfigValueElement MakeElementForField(FieldInfo field)
             {
-                RangeAttribute range = field.GetCustomAttribute<RangeAttribute>();
-
-                ConfigValueElement<int> intElement = null;
-
-                int baseValue = (int)field.GetValue(null);
-
-                if (range == null)
-                {
-                    intElement = new ConfigInputField<int>(baseValue);
-                }
-                else
-                {
-                    int clampedValue = Mathf.Clamp(baseValue, (int)range.min, (int)range.max);
-                    intElement = new IntegerSlider(clampedValue, (int)range.min, (int)range.max);
-                }
-
-                intElement.OnValueChanged += (v) => field.SetValue(null, v);
-                RegisterElementCore(descriptor, intElement);
-                return;
-            }
-
-            if (field.FieldType == typeof(uint))
-            {
-                ConfigInputField<uint> uintElement = null;
-                uint baseValue = (uint)field.GetValue(null);
-                uintElement = new ConfigInputField<uint>(baseValue);
-
-                uintElement.OnValueChanged += (v) => field.SetValue(null, v);
-                RegisterElementCore(descriptor, uintElement);
-                return;
-            }
-
-            if (field.FieldType == typeof(long))
-            {
-                ConfigInputField<long> longElement = null;
-                long baseValue = (long)field.GetValue(null);
-                longElement = new ConfigInputField<long>(baseValue);
-
-                longElement.OnValueChanged += (v) => field.SetValue(null, v);
-                RegisterElementCore(descriptor, longElement);
-                return;
-            }
-
-            if (field.FieldType == typeof(Quaternion))
-            {
-                Quaternion val = (Quaternion)field.GetValue(null);
-
-                ConfigQuaternion QuaternionElement = new ConfigQuaternion(val);
-                QuaternionElement.OnValueChanged += (v) => field.SetValue(null, v);
-                RegisterElementCore(descriptor, QuaternionElement);
-                return;
-            }
-
-            if (field.FieldType == typeof(Vector3))
-            {
-                Vector3 baseValue = (Vector3)field.GetValue(null);
-                ConfigVector3 Vector3Element = new ConfigVector3(baseValue);
-                Vector3Element.OnValueChanged += (v) => field.SetValue(null, v);
-                RegisterElementCore(descriptor, Vector3Element);
-                return;
-            }
-
-            if (field.FieldType == typeof(Vector2))
-            {
-                Vector2 baseValue = (Vector2)field.GetValue(null);
-                ConfigVector2 Vector2Element = new ConfigVector2(baseValue);
-                Vector2Element.OnValueChanged += (v) => field.SetValue(null, v);
-                RegisterElementCore(descriptor, Vector2Element);
-                return;
-            }
-
-            if (field.FieldType == typeof(ulong))
-            {
-                ConfigInputField<ulong> ulongElement = null;
-                ulong baseValue = (ulong)field.GetValue(null);
-                ulongElement = new ConfigInputField<ulong>(baseValue);
-
-                ulongElement.OnValueChanged += (v) => field.SetValue(null, v);
-                RegisterElementCore(descriptor, ulongElement);
-                return;
-            }
-
-            if (field.FieldType == typeof(bool))
-            {
-                bool baseValue = (bool)field.GetValue(null);
-                ConfigToggle toggleElement = new ConfigToggle(baseValue);
-                toggleElement.OnValueChanged += (v) => field.SetValue(null, v);
-                RegisterElementCore(descriptor, toggleElement);
-                return;
-            }
-
-            if (field.FieldType == typeof(string))
-            {
-                string baseValue = (string)field.GetValue(null);
-                ConfigInputField<string> stringElement = new ConfigInputField<string>(baseValue);
-                stringElement.OnValueChanged += (v) => field.SetValue(null, v);
-                RegisterElementCore(descriptor, stringElement);
-                return;
-            }
-
-            if (field.FieldType == typeof(char))
-            {
-                char baseValue = (char)field.GetValue(null);
-                ConfigInputField<char> stringElement = new ConfigInputField<char>(baseValue);
-                stringElement.OnValueChanged += (v) => field.SetValue(null, v);
-                RegisterElementCore(descriptor, stringElement);
-                return;
-            }
-
-            if (field.FieldType == typeof(Color))
-            {
-                Color baseValue = (Color)field.GetValue(null);
-                ConfigColor colorElement = new ConfigColor(baseValue);
-                colorElement.OnValueChanged += (v) => field.SetValue(null, v);
-                RegisterElementCore(descriptor, colorElement);
-                return;
-            }
+            object baseValue = field.GetValue(null);
 
             if (field.FieldType.IsEnum)
-            {
-                ConfigDropdown<int> enumElement = null;
-                int baseValue = (int)field.GetValue(null);
-
-                List<int> values = new List<int>();
-                foreach (var value in Enum.GetValues(field.FieldType))
                 {
-                    values.Add(Convert.ToInt32(value));
+                return FieldEnumDropdownUntyped(baseValue);
                 }
 
-                enumElement = new ConfigDropdown<int>(values.ToArray(), Enum.GetNames(field.FieldType), baseValue);
-                enumElement.OnValueChanged += (v) => field.SetValue(null, v);
-                RegisterElementCore(descriptor, enumElement);
-                return;
+            if (field.GetCustomAttribute<RangeAttribute>() is RangeAttribute range)
+            {
+                if (baseValue is float f)
+            {
+                    float min = range.min, max = range.max;
+                    float defaultValue = Mathf.Clamp(f, min, max);
+                    return new FloatSlider(defaultValue, min, max);
+            }
+                else if (baseValue is int i)
+            {
+                    int min = (int)range.min, max = (int)range.max;
+                    int defaultValue = Mathf.Clamp(i, min, max);
+                    return new IntegerSlider(defaultValue, min, max);
+            }
             }
 
+            return baseValue switch
+            {
+                int v => new ConfigInputField<int>(v),
+                float v => new ConfigInputField<float>(v),
+                uint v => new ConfigInputField<uint>(v),
+                long v => new ConfigInputField<long>(v),
+                ulong v => new ConfigInputField<ulong>(v),
+                string v => new ConfigInputField<string>(v),
+                char v => new ConfigInputField<char>(v),
+                bool v => new ConfigToggle(v),
+                Vector2 v => new ConfigVector2(v),
+                Vector3 v => new ConfigVector3(v),
+                Quaternion v => new ConfigQuaternion(v),
+                Color v => new ConfigColor(v),
+                _ => FieldUnsupportedType(field),
+            };
+            }
+
+        private ConfigValueElement FieldUnsupportedType(FieldInfo field)
+            {
             Debug.LogError($"Configgy.ConfigBuilder:{GUID}: attempted to register field {field.DeclaringType.Name}.{field.Name}. But it's type ({field.FieldType.Name}) is not supported. Skipping!");
-        }
+            return null;
+            }
+
+        private static ConfigDropdown<T> FieldEnumDropdown<T>(T baseValue)
+            {
+            T[] values = Enum.GetValues(typeof(T)).Cast<T>().ToArray();
+            string[] names = Enum.GetNames(typeof(T));
+
+            int defaultIndex = Array.FindIndex(values, v => baseValue.Equals(v));
+            if (defaultIndex < 0)
+                defaultIndex = 0;
+
+            return new ConfigDropdown<T>(values, names, defaultIndex);
+            }
+
+        // A heinous bridge from reflection to generics
+        private static readonly MethodInfo unboundFieldEnumDropdownMethod = typeof(ConfigBuilder).GetMethod(nameof(FieldEnumDropdown), BindingFlags.Static | BindingFlags.NonPublic);
+        private static ConfigValueElement FieldEnumDropdownUntyped(object baseValue)
+            {
+            MethodInfo boundMethod = unboundFieldEnumDropdownMethod.MakeGenericMethod(baseValue.GetType());
+            return (ConfigValueElement)boundMethod.Invoke(null, [baseValue]);
+            }
+
+        #endregion
 
         List<SerializedConfiggable> _data;
 

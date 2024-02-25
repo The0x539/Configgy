@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Reflection;
 
 using UnityEngine;
+using UnityEngine.Assertions;
 
 
 namespace Configgy
@@ -15,6 +17,8 @@ namespace Configgy
         public bool IsDirty { get; protected set; }
 
         protected abstract void BuildElementCore(ConfiggableAttribute descriptor, RectTransform rect);
+
+        internal abstract void BindField(FieldInfo field);
 
         protected abstract void LoadValueCore();
         protected abstract void SaveValueCore();
@@ -140,5 +144,11 @@ namespace Configgy
         }
 
         public override string ToString() => GetValue().ToString();
+
+        internal sealed override void BindField(FieldInfo field)
+        {
+            Assert.AreEqual(expected: typeof(T), actual: field.FieldType);
+            OnValueChanged += v => field.SetValue(null, v);
+        }
     }
 }
