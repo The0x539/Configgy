@@ -31,11 +31,11 @@ namespace Configgy
         internal List<IConfigElement> _configElements;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="guid">Your mod GUID ex:"JohnModder.ULTRAKILL.MyMod"</param>
         /// <param name="menuDisplayName">The display name for your config in the configuration menu.</param>
-        public ConfigBuilder(string guid = null, string menuDisplayName = null) 
+        public ConfigBuilder(string guid = null, string menuDisplayName = null)
         {
             this.owner = Assembly.GetCallingAssembly();
             this.GUID = (string.IsNullOrEmpty(guid) ? owner.GetName().Name : guid);
@@ -346,32 +346,32 @@ namespace Configgy
             {
                 element.BindField(field);
                 RegisterElementCore(descriptor, element);
-                }
-                }
+            }
+        }
 
         private ConfigValueElement MakeElementForField(FieldInfo field)
-            {
+        {
             object baseValue = field.GetValue(null);
 
             if (field.FieldType.IsEnum)
-                {
+            {
                 return FieldEnumDropdownUntyped(baseValue);
-                }
+            }
 
             if (field.GetCustomAttribute<RangeAttribute>() is RangeAttribute range)
             {
                 if (baseValue is float f)
-            {
+                {
                     float min = range.min, max = range.max;
                     float defaultValue = Mathf.Clamp(f, min, max);
                     return new FloatSlider(defaultValue, min, max);
-            }
+                }
                 else if (baseValue is int i)
-            {
+                {
                     int min = (int)range.min, max = (int)range.max;
                     int defaultValue = Mathf.Clamp(i, min, max);
                     return new IntegerSlider(defaultValue, min, max);
-            }
+                }
             }
 
             return baseValue switch
@@ -390,16 +390,16 @@ namespace Configgy
                 Color v => new ConfigColor(v),
                 _ => FieldUnsupportedType(field),
             };
-            }
+        }
 
         private ConfigValueElement FieldUnsupportedType(FieldInfo field)
-            {
+        {
             Debug.LogError($"Configgy.ConfigBuilder:{GUID}: attempted to register field {field.DeclaringType.Name}.{field.Name}. But it's type ({field.FieldType.Name}) is not supported. Skipping!");
             return null;
-            }
+        }
 
         private static ConfigDropdown<T> FieldEnumDropdown<T>(T baseValue)
-            {
+        {
             T[] values = Enum.GetValues(typeof(T)).Cast<T>().ToArray();
             string[] names = Enum.GetNames(typeof(T));
 
@@ -408,15 +408,15 @@ namespace Configgy
                 defaultIndex = 0;
 
             return new ConfigDropdown<T>(values, names, defaultIndex);
-            }
+        }
 
         // A heinous bridge from reflection to generics
         private static readonly MethodInfo unboundFieldEnumDropdownMethod = typeof(ConfigBuilder).GetMethod(nameof(FieldEnumDropdown), BindingFlags.Static | BindingFlags.NonPublic);
         private static ConfigValueElement FieldEnumDropdownUntyped(object baseValue)
-            {
+        {
             MethodInfo boundMethod = unboundFieldEnumDropdownMethod.MakeGenericMethod(baseValue.GetType());
             return (ConfigValueElement)boundMethod.Invoke(null, [baseValue]);
-            }
+        }
 
         #endregion
 
@@ -479,7 +479,7 @@ namespace Configgy
 
             //Remove null values.
             loadedData = loadedData.Where(x => x.IsValid()).ToList();
-            
+
             _data = loadedData;
         }
 
