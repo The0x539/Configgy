@@ -101,8 +101,6 @@ namespace Configgy
             BuildInternal();
         }
 
-        
-
 
         /// <summary>
         /// Builds your configuration menu and registers it with Configgy.
@@ -288,22 +286,22 @@ namespace Configgy
                 ConfigEntry<Quaternion> e => new BepinQuaternion(e),
                 ConfigEntry<KeyCode> e => new BepinKeybind(e),
                 ConfigEntry<KeyboardShortcut> e => ShortcutAsKeybind(e),
-                _ => null,
+                _ => BepinUnsupportedType(entry)
             };
 
             if (configElement is null)
-            {
-                if (entry is not ConfigEntry<KeyboardShortcut>)
-            {
-                    Debug.LogWarning($"Configgy.ConfigBuilder:{GUID}: failed to auto generate BepInEx ConfigEntry {entry.Definition.Section}.{entry.Definition.Key} because its type ({entry.SettingType.Name}) is not supported.");
-            }
-            }
+                return;
 
             RegisterElementCore(attribute, configElement);
         }
 
-        private static IConfigElement BepinPrimitiveElement<T>(ConfigEntry<T> entry)
-            where T : IEquatable<T>
+        private IConfigElement BepinUnsupportedType(ConfigEntryBase entry)
+        {
+            Debug.LogWarning($"Configgy.ConfigBuilder:{GUID}: failed to auto generate BepInEx ConfigEntry {entry.Definition.Section}.{entry.Definition.Key}. It's type ({entry.SettingType.Name}) is not supported.");
+            return null;
+        }
+
+        private static IConfigElement BepinPrimitiveElement<T>(ConfigEntry<T> entry) where T : IEquatable<T>
         {
             return (entry?.Description?.AcceptableValues) switch
             {
@@ -322,17 +320,18 @@ namespace Configgy
                 // fallback 2: billion-dollar-mistake boogaloo
                 null => new BepinInputField<T>(entry),
             };
-            }
+        }
 
         private IConfigElement ShortcutAsKeybind(ConfigEntry<KeyboardShortcut> entry)
-            {
+        {
             if (entry.Value.Modifiers.Any())
             {
-                    Debug.LogWarning($"Configgy.ConfigBuilder:{GUID}: failed to auto generate BepInEx ConfigEntry {entry.Definition.Section}.{entry.Definition.Key} because Configgy does not support multi key keybinds. Sowwy TwT");
+                Debug.LogWarning($"Configgy.ConfigBuilder:{GUID}: failed to auto generate BepInEx ConfigEntry {entry.Definition.Section}.{entry.Definition.Key}. Configgy does not support multi key keybinds. Removing the modifiers within the config file manually will allow this element to be generated as a single-key keybind.");
                 return null;
-                }
-            return new BepinKeybind(entry);
             }
+
+            return new BepinKeybind(entry);
+        }
 
         private void RegisterPrimitive(ConfiggableAttribute descriptor, FieldInfo field)
         {

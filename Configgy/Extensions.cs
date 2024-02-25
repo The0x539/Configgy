@@ -21,8 +21,7 @@ namespace Configgy
 
         public static T GetDefault<T>(this ConfigEntry<T> entry) => (T)entry.DefaultValue;
 
-        public static T GetTag<T>(this ConfigEntryBase entry)
-            where T : class
+        public static T GetTag<T>(this ConfigEntryBase entry) where T : class
         {
             return entry?.Description?.Tags?.OfType<T>()?.FirstOrDefault();
         }

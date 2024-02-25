@@ -5,8 +5,7 @@ using System.Linq;
 
 namespace Configgy.Configuration.AutoGeneration
 {
-    internal class BepinDropdown<T> : ConfigDropdown<T>
-        where T : IEquatable<T>
+    internal class BepinDropdown<T> : ConfigDropdown<T> where T : IEquatable<T>
     {
         protected ConfigEntry<T> entry;
 
