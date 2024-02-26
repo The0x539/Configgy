@@ -1,11 +1,14 @@
 ﻿using BepInEx.Configuration;
+
 using Configgy.Configuration.AutoGeneration;
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+
 using UnityEngine;
 
 namespace Configgy
@@ -272,67 +275,61 @@ namespace Configgy
 
             attribute.SetOwner(this);
 
-            IConfigElement configElement = entry switch
+            // type T = entry.SettingType;
+            // ConfigValueElement<T> element = MakeBepInExElement<T>(entry);
+            var element = typeof(ConfigBuilder)
+                .GetMethod(nameof(MakeBepInExElement), BindingFlags.Static | BindingFlags.NonPublic)
+                .MakeGenericMethod(entry.SettingType)
+                .Invoke(null, [entry])
+                as ConfigValueElement;
+
+            if (element is null)
             {
-                ConfigEntry<bool> e => new BepinToggle(e),
-                ConfigEntry<float> e => BepinPrimitiveElement(e),
-                ConfigEntry<int> e => BepinPrimitiveElement(e),
-                ConfigEntry<string> e => BepinPrimitiveElement(e),
-                ConfigEntry<uint> e => BepinPrimitiveElement(e),
-                ConfigEntry<long> e => BepinPrimitiveElement(e),
-                ConfigEntry<ulong> e => BepinPrimitiveElement(e),
-                ConfigEntry<char> e => BepinPrimitiveElement(e),
-                ConfigEntry<Color> e => new BepinColor(e),
-                ConfigEntry<Vector3> e => new BepinVector3(e),
-                ConfigEntry<Vector2> e => new BepinVector2(e),
-                ConfigEntry<Quaternion> e => new BepinQuaternion(e),
-                ConfigEntry<KeyCode> e => new BepinKeybind(e),
-                ConfigEntry<KeyboardShortcut> e => ShortcutAsKeybind(e),
-                _ => BepinUnsupportedType(entry)
-            };
-
-            if (configElement is null)
-                return;
-
-            RegisterElementCore(attribute, configElement);
-        }
-
-        private IConfigElement BepinUnsupportedType(ConfigEntryBase entry)
-        {
-            Debug.LogWarning($"Configgy.ConfigBuilder:{GUID}: failed to auto generate BepInEx ConfigEntry {entry.Definition.Section}.{entry.Definition.Key}. It's type ({entry.SettingType.Name}) is not supported.");
-            return null;
-        }
-
-        private static IConfigElement BepinPrimitiveElement<T>(ConfigEntry<T> entry) where T : IEquatable<T>
-        {
-            return (entry?.Description?.AcceptableValues) switch
-            {
-                // acceptable value ranges for single-precision floats and 32-bit signed integers get sliders
-                // TODO: make shit more generic so supporting long/uint/double wouldn't require defining more classes
-                AcceptableValueRange<float> range => new BepinFloatSlider(entry as ConfigEntry<float>, range),
-                AcceptableValueRange<int> range => new BepinIntegerSlider(entry as ConfigEntry<int>, range),
-
-                // anything with an AcceptableValueList gets a dropdown
-                // (as long as we managed to even call this method, which is a challenge for custom types)
-                AcceptableValueList<T> list => new BepinDropdown<T>(entry, list),
-
-                // fallback: if there's any sort of validator we can work with, use that
-                AcceptableValueBase avb => new BepinInputField<T>(entry, val => avb.IsValid(val)),
-
-                // fallback 2: billion-dollar-mistake boogaloo
-                null => new BepinInputField<T>(entry),
-            };
-        }
-
-        private IConfigElement ShortcutAsKeybind(ConfigEntry<KeyboardShortcut> entry)
-        {
-            if (entry.Value.Modifiers.Any())
-            {
-                Debug.LogWarning($"Configgy.ConfigBuilder:{GUID}: failed to auto generate BepInEx ConfigEntry {entry.Definition.Section}.{entry.Definition.Key}. Configgy does not support multi key keybinds. Removing the modifiers within the config file manually will allow this element to be generated as a single-key keybind.");
-                return null;
+                Debug.LogWarning($"Configgy.ConfigBuilder:{GUID}: failed to auto generate BepInEx ConfigEntry {entry.Definition.Section}.{entry.Definition.Key}. It's type ({entry.SettingType.Name}) is not supported.");
             }
 
-            return new BepinKeybind(entry);
+            RegisterElementCore(attribute, BepinElement.WrapUntyped(entry, element));
+        }
+
+        private static ConfigValueElement MakeBepInExElement<T>(ConfigEntry<T> entry)
+        {
+            AcceptableValueBase domain = entry.Description?.AcceptableValues;
+            if (domain.IsAcceptableValueList())
+            {
+                // This was supposed to be just another arm in a switch statement,
+                // but I can't refer to AcceptableValueList<T> unless the constraint is satisfied.
+                // Some types passed to this method won't satisfy that constraint, so we can't add it to this method.
+                //
+                // This could hardly be any more pointlessly convoluted. Thanks, dotnet.
+                var unbound = typeof(ConfigBuilder).GetMethod(nameof(MakeBepInExDropdown), BindingFlags.Static | BindingFlags.NonPublic);
+                var bound = unbound.MakeGenericMethod(typeof(T));
+                return (ConfigDropdown<T>)bound.Invoke(null, [entry]);
+            }
+            else if (domain is AcceptableValueRange<int> intRange)
+            {
+                return new IntegerSlider((int)entry.DefaultValue, intRange.MinValue, intRange.MaxValue);
+            }
+            else if (domain is AcceptableValueRange<float> floatRange)
+            {
+                return new FloatSlider((float)entry.DefaultValue, floatRange.MinValue, floatRange.MaxValue);
+            }
+            else
+            {
+                T defaultValue = entry.GetDefault();
+                return ConfigValueElement.Create(defaultValue);
+            }
+        }
+
+        private static ConfigDropdown<T> MakeBepInExDropdown<T>(ConfigEntry<T> entry) where T : IEquatable<T>
+        {
+            AcceptableValueList<T> domain = (AcceptableValueList<T>)entry.Description.AcceptableValues;
+            T[] values = domain.AcceptableValues;
+
+            Func<T, string> getName = entry.GetTag<Func<T, string>>() ?? (v => v.ToString());
+            string[] names = values.Select(getName).ToArray();
+
+            T defaultValue = entry.GetDefault();
+            return new ConfigDropdown<T>(values, defaultValue, names);
         }
 
         #endregion
@@ -353,11 +350,6 @@ namespace Configgy
         {
             object baseValue = field.GetValue(null);
 
-            if (field.FieldType.IsEnum)
-            {
-                return FieldEnumDropdownUntyped(baseValue);
-            }
-
             if (field.GetCustomAttribute<RangeAttribute>() is RangeAttribute range)
             {
                 if (baseValue is float f)
@@ -374,48 +366,20 @@ namespace Configgy
                 }
             }
 
-            return baseValue switch
+            // type T = baseValue.GetType();
+            // ConfigValueElement<T> element = ConfigValueElement.Create<T>(baseValue);
+            var element = typeof(ConfigValueElement)
+                .GetMethod(nameof(ConfigValueElement.Create))
+                .MakeGenericMethod(baseValue.GetType())
+                .Invoke(null, [baseValue])
+                as ConfigValueElement;
+
+            if (element is null)
             {
-                int v => new ConfigInputField<int>(v),
-                float v => new ConfigInputField<float>(v),
-                uint v => new ConfigInputField<uint>(v),
-                long v => new ConfigInputField<long>(v),
-                ulong v => new ConfigInputField<ulong>(v),
-                string v => new ConfigInputField<string>(v),
-                char v => new ConfigInputField<char>(v),
-                bool v => new ConfigToggle(v),
-                Vector2 v => new ConfigVector2(v),
-                Vector3 v => new ConfigVector3(v),
-                Quaternion v => new ConfigQuaternion(v),
-                Color v => new ConfigColor(v),
-                _ => FieldUnsupportedType(field),
-            };
-        }
+                Debug.LogError($"Configgy.ConfigBuilder:{GUID}: attempted to register field {field.DeclaringType.Name}.{field.Name}. But it's type ({field.FieldType.Name}) is not supported. Skipping!");
+            }
 
-        private ConfigValueElement FieldUnsupportedType(FieldInfo field)
-        {
-            Debug.LogError($"Configgy.ConfigBuilder:{GUID}: attempted to register field {field.DeclaringType.Name}.{field.Name}. But it's type ({field.FieldType.Name}) is not supported. Skipping!");
-            return null;
-        }
-
-        private static ConfigDropdown<T> FieldEnumDropdown<T>(T baseValue)
-        {
-            T[] values = Enum.GetValues(typeof(T)).Cast<T>().ToArray();
-            string[] names = Enum.GetNames(typeof(T));
-
-            int defaultIndex = Array.FindIndex(values, v => baseValue.Equals(v));
-            if (defaultIndex < 0)
-                defaultIndex = 0;
-
-            return new ConfigDropdown<T>(values, names, defaultIndex);
-        }
-
-        // A heinous bridge from reflection to generics
-        private static readonly MethodInfo unboundFieldEnumDropdownMethod = typeof(ConfigBuilder).GetMethod(nameof(FieldEnumDropdown), BindingFlags.Static | BindingFlags.NonPublic);
-        private static ConfigValueElement FieldEnumDropdownUntyped(object baseValue)
-        {
-            MethodInfo boundMethod = unboundFieldEnumDropdownMethod.MakeGenericMethod(baseValue.GetType());
-            return (ConfigValueElement)boundMethod.Invoke(null, [baseValue]);
+            return element;
         }
 
         #endregion

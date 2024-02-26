@@ -16,6 +16,8 @@ namespace Configgy
         protected bool firstLoadDone = false;
         public bool IsDirty { get; protected set; }
 
+        public abstract Type ConfigValueType { get; }
+
         protected abstract void BuildElementCore(RectTransform rect);
 
         internal abstract void BindField(FieldInfo field);
@@ -65,19 +67,47 @@ namespace Configgy
         void IConfigElement.BindConfig(ConfigBuilder config) => this.config = config;
 
         #endregion
+
+        public static ConfigValueElement<T> Create<T>(T defaultValue)
+        {
+            ConfigValueElement element = defaultValue switch
+            {
+                bool v => new ConfigToggle(v),
+                Vector2 v => new ConfigVector2(v),
+                Vector3 v => new ConfigVector3(v),
+                Quaternion v => new ConfigQuaternion(v),
+                Color v => new ConfigColor(v),
+                KeyCode v => new ConfigKeybind(v),
+
+                Enum => ConfigDropdown<T>.ForEnum(defaultValue),
+
+                sbyte or short or int or long
+                or byte or ushort or uint or ulong
+                or float or double or char or string
+                => new ConfigInputField<T>(defaultValue),
+
+                _ => null,
+            };
+
+            if (element is null)
+                return null;
+
+            return (ConfigValueElement<T>)element;
+        }
     }
 
     public abstract class ConfigValueElement<T> : ConfigValueElement
     {
-        public T DefaultValue { get; }
+        public sealed override Type ConfigValueType => typeof(T);
 
+        protected readonly T defaultValue;
         protected T? value;
 
         public Action<T> OnValueChanged;
 
         public ConfigValueElement(T defaultValue)
         {
-            DefaultValue = defaultValue;
+            this.defaultValue = defaultValue;
         }
 
         protected override void LoadValueCore()
@@ -111,6 +141,8 @@ namespace Configgy
             config.SaveDeferred();
             IsDirty = false;
         }
+
+        public virtual T DefaultValue => defaultValue;
 
         public T Value => GetValue();
 
