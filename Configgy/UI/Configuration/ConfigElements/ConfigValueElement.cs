@@ -62,7 +62,6 @@ namespace Configgy
         }
 
         void IConfigElement.BindDescriptor(ConfiggableAttribute configgable) => this.descriptor = configgable;
-        internal ConfiggableAttribute GetDescriptor() => descriptor;
         ConfiggableAttribute IConfigElement.GetDescriptor() => descriptor;
         void IConfigElement.BindConfig(ConfigBuilder config) => this.config = config;
 
@@ -101,7 +100,7 @@ namespace Configgy
         public sealed override Type ConfigValueType => typeof(T);
 
         protected readonly T defaultValue;
-        protected T? value;
+        protected internal T? value;
 
         public Action<T> OnValueChanged;
 

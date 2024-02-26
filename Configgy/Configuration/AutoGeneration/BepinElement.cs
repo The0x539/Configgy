@@ -7,20 +7,27 @@ using UnityEngine.Assertions;
 
 namespace Configgy.Configuration.AutoGeneration
 {
-    internal class BepinElement<T> : ConfigValueElement<T>
+    internal class BepinElement<T> : ConfigValueElement<T>, IConfigElement
     {
         private readonly ConfigEntry<T> entry;
-        private readonly ConfigValueElement<T> element;
+        private readonly ConfigValueElement<T> element; // composition over inheritance
 
         public BepinElement(ConfigEntry<T> entry, ConfigValueElement<T> element) : base(entry.GetDefault())
         {
-            element.SetValue(entry.Value);
+            element.value = entry.Value;
+            element.OnValueChanged += OnInnerValueChanged;
             this.entry = entry;
             this.element = element;
         }
 
         protected override void BuildElementCore(RectTransform rect) => element.BuildElement(rect);
         protected override void RefreshElementValueCore() => element.RefreshElementValue();
+
+        void IConfigElement.BindDescriptor(ConfiggableAttribute configgable)
+        {
+            (element as IConfigElement).BindDescriptor(configgable);
+            descriptor = configgable;
+        }
 
         protected override void LoadValueCore()
         {
@@ -37,12 +44,12 @@ namespace Configgy.Configuration.AutoGeneration
         public override T DefaultValue => entry.GetDefault();
 
         protected override T GetValueCore() => entry.Value;
+        protected override void SetValueCore(T value) => element.SetValue(value); // triggers OnInnerValueChanged
 
-        protected override void SetValueCore(T value)
+        private void OnInnerValueChanged(T value)
         {
             entry.Value = value;
             OnValueChanged?.Invoke(value);
-            element.SetValue(value); // kinda inherited baggage
             DirtyConfigFiles.Mark(entry.ConfigFile);
         }
     }
@@ -56,12 +63,12 @@ namespace Configgy.Configuration.AutoGeneration
         }
 
         // A heinous bridge from reflection to generics.
-        private static readonly MethodInfo unboundWrapMethod = typeof(ConfigBuilder).GetMethod(nameof(Wrap));
-        public static ConfigValueElement WrapUntyped(ConfigEntryBase entry, ConfigValueElement element)
+        private static readonly MethodInfo unboundWrapMethod = typeof(BepinElement).GetMethod(nameof(Wrap));
+        public static IConfigElement WrapUntyped(ConfigEntryBase entry, ConfigValueElement element)
         {
             Assert.AreEqual(element.ConfigValueType, entry.SettingType);
             MethodInfo boundMethod = unboundWrapMethod.MakeGenericMethod(entry.SettingType);
-            return (ConfigValueElement)boundMethod.Invoke(null, [entry, element]);
+            return (IConfigElement)boundMethod.Invoke(null, [entry, element]);
         }
     }
 }
