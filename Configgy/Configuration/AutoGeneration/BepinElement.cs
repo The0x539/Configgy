@@ -1,5 +1,6 @@
 ﻿using BepInEx.Configuration;
 
+using System;
 using System.Reflection;
 
 using UnityEngine;
@@ -15,6 +16,15 @@ namespace Configgy.Configuration.AutoGeneration
         public BepinElement(ConfigEntry<T> entry, ConfigValueElement<T> element) : base(entry.GetDefault())
         {
             element.value = entry.Value;
+            if (element is ConfigDropdown<T> dropdown)
+            {
+                int index = Array.FindIndex(dropdown.Values, v => entry.Value.Equals(v));
+                if (index >= 0)
+                {
+                    dropdown.SetIndex(index);
+                }
+            }
+
             element.OnValueChanged += OnInnerValueChanged;
             this.entry = entry;
             this.element = element;
@@ -50,6 +60,7 @@ namespace Configgy.Configuration.AutoGeneration
         {
             entry.Value = value;
             OnValueChanged?.Invoke(value);
+            RefreshElementValue();
             DirtyConfigFiles.Mark(entry.ConfigFile);
         }
     }
