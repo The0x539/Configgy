@@ -286,6 +286,7 @@ namespace Configgy
             if (element is null)
             {
                 Debug.LogWarning($"Configgy.ConfigBuilder:{GUID}: failed to auto generate BepInEx ConfigEntry {entry.Definition.Section}.{entry.Definition.Key}. It's type ({entry.SettingType.Name}) is not supported.");
+                return; //skip unsupported types
             }
 
             RegisterElementCore(attribute, BepinElement.WrapUntyped(entry, element));

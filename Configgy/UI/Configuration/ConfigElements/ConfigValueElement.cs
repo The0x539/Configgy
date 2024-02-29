@@ -115,6 +115,10 @@ namespace Configgy
             //This should probably be changed to something more reliable and not static.
 
             firstLoadDone = true; //nullable values apparently can just randomly have values so this annoying bool is needed
+            
+            //For dynamically created elements, the descriptor and config may not be set yet.
+            if (descriptor == null || config == null)
+                return;
 
             if (config.TryGetValueAtAddress<T>(descriptor.SerializationAddress, out T value))
             {
